@@ -13,6 +13,9 @@ quick_error! {
         InvalidArgument(err: String) {
             display("{}", err)
         }
+        NotFound(err: String) {
+            display("{}", err)
+        }
     }
 }
 
