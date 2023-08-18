@@ -1,0 +1,12 @@
+[package]
+name = "movies-db-cli"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+movies-db = { path = "../movies-db" }
+log = "0.4"
+anyhow = "1.0"
+simple-logging = "2.0"

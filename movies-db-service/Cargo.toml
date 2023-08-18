@@ -1,0 +1,7 @@
+[workspace]
+
+members = ["movies-db", "movies-db-cli"]
+
+[profile.release-with-debug]
+inherits = "release"
+debug = true
