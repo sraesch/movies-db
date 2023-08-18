@@ -1,7 +1,9 @@
+mod db;
 mod error;
 mod options;
-mod db;
+mod storage;
 
-pub use error::*;
-pub use options::*; 
 pub use db::*;
+pub use error::*;
+pub use options::*;
+pub use storage::*;
