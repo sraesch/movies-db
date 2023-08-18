@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 /// The options for the service
 pub struct Options {
-    root_dir: PathBuf,
+    pub root_dir: PathBuf,
 }
 
 impl Default for Options {
