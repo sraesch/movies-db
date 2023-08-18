@@ -10,3 +10,4 @@ movies-db = { path = "../movies-db" }
 log = "0.4"
 anyhow = "1.0"
 simple-logging = "2.0"
+clap = { version = "4.2", features = ["derive"] }
