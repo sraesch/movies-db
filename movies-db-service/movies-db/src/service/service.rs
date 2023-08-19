@@ -1,16 +1,12 @@
-use std::{convert::Infallible, sync::Arc};
+use std::sync::Arc;
 
-use hyper::{
-    service::{make_service_fn, service_fn},
-    Server,
-};
-use log::info;
+use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
+
+use log::{error, info};
 
 use crate::{Error, MovieStorage, MoviesIndex, Options};
 
 pub type BoxError = Box<dyn std::error::Error + Send + Sync + 'static>;
-
-use hyper::{Body, Request, Response};
 
 use super::service_handler::ServiceHandler;
 
@@ -45,33 +41,51 @@ where
     pub async fn run(&self) -> Result<(), Error> {
         info!("Running the service...");
 
+        match self.run_http_server().await {
+            Err(err) => {
+                error!("Running the service...FAILED");
+                error!("Error: {}", err);
+                return Err(err);
+            }
+            Ok(()) => {
+                info!("Running the service...STOPPED");
+            }
+        }
+
         Ok(())
     }
 
-    fn run_http_server(&self) {
+    async fn run_http_server(&self) -> Result<(), Error> {
         info!("Running the HTTP server...");
 
-        let handler = self.handler.clone();
+        info!("Listening on {}", self.options.http_address);
 
-        // create service handler
-        let make_svc = make_service_fn(move |_conn| {
-            async move {
-                // This is the request handler.
-                Ok::<_, Infallible>(service_fn(move |req| Self::serve_req(req, handler)))
+        match HttpServer::new(|| {
+            App::new().service(web::resource("/").to(|| async { "hello world" }))
+        })
+        .bind(self.options.http_address.clone())?
+        .run()
+        .await
+        {
+            Err(err) => {
+                error!("Running the HTTP server...FAILED");
+                error!("Error: {}", err);
+                Err(err.into())
             }
-        });
-
-        // create server instance
-        let server = Server::bind(&self.options.http_address).serve(make_svc);
-    }
-
-    async fn serve_req(
-        req: Request<Body>,
-        shared: Arc<ServiceHandler<I, S>>,
-    ) -> Result<Response<Body>, BoxError> {
-        match shared.handle(req).await {
-            Ok(response) => Ok(response),
-            Err(err) => panic!("Unexpected server error due to {}", err),
+            Ok(_) => {
+                info!("Running the HTTP server...STOPPED");
+                Ok(())
+            }
         }
     }
+
+    // async fn serve_req(
+    //     req: Request<Body>,
+    //     shared: Arc<ServiceHandler<I, S>>,
+    // ) -> Result<Response<Body>, BoxError> {
+    //     match shared.handle(req).await {
+    //         Ok(response) => Ok(response),
+    //         Err(err) => panic!("Unexpected server error due to {}", err),
+    //     }
+    // }
 }

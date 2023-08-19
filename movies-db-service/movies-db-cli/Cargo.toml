@@ -11,4 +11,4 @@ log = "0.4"
 anyhow = "1.0"
 simple-logging = "2.0"
 clap = { version = "4.2", features = ["derive"] }
-tokio = { version = "1.32", features = ["full"] }
+actix-web = "4"

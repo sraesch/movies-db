@@ -2,7 +2,7 @@ mod options;
 
 use anyhow::Result;
 use log::{error, info};
-use movies_db::{Options as ServiceOptions, Service, SimpleMoviesIndex};
+use movies_db::{file_storage::FileStorage, Options as ServiceOptions, Service, SimpleMoviesIndex};
 use options::Options;
 
 use clap::Parser;
@@ -25,17 +25,15 @@ async fn run_program() -> Result<()> {
     let options = parse_args()?;
     initialize_logging(LevelFilter::from(options.log_level));
 
-    let service_options = ServiceOptions {
-        root_dir: options.root_dir,
-    };
+    let service_options: ServiceOptions = options.into();
 
-    let service: Service<SimpleMoviesIndex> = Service::new(&service_options)?;
+    let service: Service<SimpleMoviesIndex, FileStorage> = Service::new(&service_options)?;
     service.run().await?;
 
     Ok(())
 }
 
-#[tokio::main]
+#[actix_web::main]
 async fn main() {
     match run_program().await {
         Ok(()) => {

@@ -141,10 +141,8 @@ mod test {
     #[test]
     fn test_write_movie_data() {
         let root_dir = TempDir::new("movies-db").unwrap();
-
-        let options = crate::Options {
-            root_dir: root_dir.path().to_path_buf(),
-        };
+        let mut options: Options = Default::default();
+        options.root_dir = root_dir.path().to_path_buf();
 
         let storage = FileStorage::new(&options).unwrap();
 
