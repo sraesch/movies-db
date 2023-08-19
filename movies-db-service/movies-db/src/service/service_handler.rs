@@ -1,6 +1,7 @@
 use crate::{Error, MovieId, MovieStorage, MoviesIndex, Options};
 
 use actix_web::{web, Responder, Result};
+use log::error;
 use serde::{Deserialize, Serialize};
 
 pub struct ServiceHandler<I, S>
@@ -36,7 +37,13 @@ where
 
     /// Handles the request to show the list of all movies.
     pub async fn handle_show_list(&self) -> Result<impl Responder> {
-        let movies_ids = self.index.list_movies();
+        let movies_ids = match self.index.search_movies(Default::default()) {
+            Ok(movies_ids) => movies_ids,
+            Err(err) => {
+                error!("Internal error: {}", err);
+                return Err(actix_web::error::ErrorInternalServerError(err));
+            }
+        };
 
         let movies: Vec<MovieListEntry> = movies_ids
             .iter()
