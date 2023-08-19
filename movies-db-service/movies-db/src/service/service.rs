@@ -64,7 +64,7 @@ where
 
         match HttpServer::new(move || {
             let api_v1 =
-                web::scope("/api/v1").route("/movie", web::get().to(Self::handle_show_list));
+                web::scope("/api/v1").route("/movie", web::get().to(Self::handle_get_movie));
 
             App::new().app_data(handler.clone()).service(api_v1)
         })
@@ -100,7 +100,7 @@ where
         }
     }
 
-    async fn handle_show_list(
+    async fn handle_get_movie(
         handler: web::Data<RwLock<ServiceHandler<I, S>>>,
     ) -> Result<impl Responder> {
         handler.read().unwrap().handle_show_list().await
