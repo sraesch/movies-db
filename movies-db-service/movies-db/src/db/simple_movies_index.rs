@@ -50,7 +50,7 @@ impl MoviesIndex for SimpleMoviesIndex {
 
         let mut movie_with_date = MovieWithDate {
             movie,
-            date: chrono::Utc::now(),
+            date: chrono::Utc::now().to_rfc3339(),
         };
         Self::process_tags(&mut movie_with_date.movie.tags);
 
