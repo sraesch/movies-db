@@ -1,5 +1,3 @@
-use chrono::prelude::*;
-
 use crate::{Error, MovieId, Options};
 
 use serde::{Deserialize, Serialize};
