@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{marker::PhantomData, sync::RwLock};
 
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
 
@@ -10,13 +10,13 @@ pub type BoxError = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 use super::service_handler::ServiceHandler;
 
-pub struct Service<I, S>
+pub struct Service<I: Sized + 'static, S: Sized + 'static>
 where
     I: MoviesIndex,
     S: MovieStorage,
 {
-    handler: Arc<ServiceHandler<I, S>>,
     options: Options,
+    phantom: PhantomData<(I, S)>,
 }
 
 impl<I, S> Service<I, S>
@@ -29,12 +29,10 @@ where
     /// # Arguments
     /// * `options` - The options for the service.
     pub fn new(options: &Options) -> Result<Self, Error> {
-        let handler: ServiceHandler<I, S> = ServiceHandler::new(options.clone());
-        let handler = Arc::new(handler);
-
         let options = options.clone();
+        let phantom = PhantomData {};
 
-        Ok(Self { handler, options })
+        Ok(Self { phantom, options })
     }
 
     /// Runs the service.
@@ -55,13 +53,19 @@ where
         Ok(())
     }
 
+    /// Runs the HTTP server.
     async fn run_http_server(&self) -> Result<(), Error> {
-        info!("Running the HTTP server...");
+        let handler = self.create_service_handler()?;
+        let handler = RwLock::new(handler);
+        let handler = web::Data::new(handler);
 
+        info!("Running the HTTP server...");
         info!("Listening on {}", self.options.http_address);
 
-        match HttpServer::new(|| {
-            App::new().service(web::resource("/").to(|| async { "hello world" }))
+        match HttpServer::new(move || {
+            App::new()
+                .app_data(handler.clone())
+                .service(web::resource("/api/v1").to(|| async { "hello world" }))
         })
         .bind(self.options.http_address.clone())?
         .run()
@@ -79,13 +83,19 @@ where
         }
     }
 
-    // async fn serve_req(
-    //     req: Request<Body>,
-    //     shared: Arc<ServiceHandler<I, S>>,
-    // ) -> Result<Response<Body>, BoxError> {
-    //     match shared.handle(req).await {
-    //         Ok(response) => Ok(response),
-    //         Err(err) => panic!("Unexpected server error due to {}", err),
-    //     }
-    // }
+    /// Creates a new instance of the service handler.
+    fn create_service_handler(&self) -> Result<ServiceHandler<I, S>, Error> {
+        info!("Creating the service handler...");
+        match ServiceHandler::new(self.options.clone()) {
+            Err(err) => {
+                error!("Creating the service handler...FAILED");
+                error!("Error: {}", err);
+                Err(err)
+            }
+            Ok(handler) => {
+                info!("Creating the service handler...OK");
+                Ok(handler)
+            }
+        }
+    }
 }

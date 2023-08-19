@@ -82,7 +82,7 @@ pub struct MovieSearchQuery {
 
 /// The movies index manages a list of all movies in the database.
 /// Additionally, it provides methods for managing and searching movies.
-pub trait MoviesIndex {
+pub trait MoviesIndex: Send + Sync {
     /// Creates a new instance of the movies index
     ///
     /// # Arguments

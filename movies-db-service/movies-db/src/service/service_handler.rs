@@ -1,4 +1,4 @@
-use crate::{MovieStorage, MoviesIndex, Options};
+use crate::{Error, MovieStorage, MoviesIndex, Options};
 
 pub struct ServiceHandler<I, S>
 where
@@ -18,10 +18,10 @@ where
     ///
     /// # Arguments
     /// * `options` - The options for the service handler.
-    pub fn new(options: Options) -> Self {
-        let index = I::new(&options).unwrap();
-        let storage = S::new(&options).unwrap();
+    pub fn new(options: Options) -> Result<Self, Error> {
+        let index = I::new(&options)?;
+        let storage = S::new(&options)?;
 
-        Self { index, storage }
+        Ok(Self { index, storage })
     }
 }

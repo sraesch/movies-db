@@ -11,7 +11,7 @@ pub enum MovieDataType {
 }
 
 /// The trait for storing movie data.
-pub trait MovieStorage {
+pub trait MovieStorage: Send + Sync {
     type W: Write;
     type R: Read;
 
