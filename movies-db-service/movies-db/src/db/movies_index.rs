@@ -1,5 +1,8 @@
+use std::ops::Range;
+
 use crate::{Error, MovieId, Options};
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 /// A single entry in the movie database.
@@ -19,12 +22,51 @@ pub struct Movie {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MovieWithDate {
     pub movie: Movie,
-    pub date: String,
+    pub date: DateTime<Utc>,
+}
+
+/// The sorting order for the movies.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
+pub enum SortingField {
+    #[serde(rename(serialize = "title", deserialize = "title"))]
+    Title,
+
+    #[serde(rename(serialize = "date", deserialize = "date"))]
+    Date,
+}
+
+/// The sorting order for the movies.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
+pub enum SortingOrder {
+    #[serde(rename(serialize = "ascending", deserialize = "ascending"))]
+    Ascending,
+
+    #[serde(rename(serialize = "descending", deserialize = "descending"))]
+    Descending,
+}
+
+/// A sorting for the movies.
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+pub struct MovieSorting {
+    pub field: SortingField,
+    pub order: SortingOrder,
+}
+
+impl Default for MovieSorting {
+    fn default() -> Self {
+        Self {
+            field: SortingField::Date,
+            order: SortingOrder::Descending,
+        }
+    }
 }
 
 /// A query for searching movies in the database.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct MovieSearchQuery {
+    /// The sorting being used for the movies.
+    pub sorting: MovieSorting,
+
     /// Optionally, a search string for the title of the movie. If provided, only movies whose
     /// title matches the search string will be returned.
     /// Wildcards are supported, e.g., *foo* will match any movie whose title contains "foo".
@@ -33,6 +75,9 @@ pub struct MovieSearchQuery {
     /// A sorted list of lower case tags that must match the movie.
     #[serde(default)]
     pub tags: Vec<String>,
+
+    /// Optionally, a range for the items to return can be specified.
+    pub range: Option<Range<usize>>,
 }
 
 /// The movies index manages a list of all movies in the database.
@@ -63,9 +108,6 @@ pub trait MoviesIndex {
     /// # Arguments
     /// `id` - The ID of the movie to remove.
     fn remove_movie(&mut self, id: &MovieId) -> Result<(), Error>;
-
-    /// Returns a list of all movies in the index.
-    fn list_movies(&self) -> Vec<MovieId>;
 
     /// Changes the description of the movie for the given ID.
     ///
@@ -103,6 +145,10 @@ mod test {
     fn test_query_serialization() {
         let query_string = r#"
             {
+                "sorting": {
+                    "field": "title",
+                    "order": "ascending"
+                },
                 "title": "foo",
                 "tags": ["bar", "baz"]
             }
@@ -112,9 +158,15 @@ mod test {
 
         assert_eq!(query.title, Some("foo".to_string()));
         assert_eq!(query.tags, vec!["bar".to_string(), "baz".to_string()]);
+        assert_eq!(query.sorting.field, SortingField::Title);
+        assert_eq!(query.sorting.order, SortingOrder::Ascending);
 
         let query_string = r#"
             {
+                "sorting": {
+                    "field": "date",
+                    "order": "descending"
+                },
                 "title": "foo"
             }
         "#;
@@ -123,5 +175,7 @@ mod test {
 
         assert_eq!(query.title, Some("foo".to_string()));
         assert!(query.tags.is_empty());
+        assert_eq!(query.sorting.field, SortingField::Date);
+        assert_eq!(query.sorting.order, SortingOrder::Descending);
     }
 }
