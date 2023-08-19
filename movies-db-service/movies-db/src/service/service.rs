@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, sync::RwLock};
 
-use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{get, post, web, App, HttpServer, Responder, Result};
 
 use log::{error, info};
 
@@ -63,9 +63,10 @@ where
         info!("Listening on {}", self.options.http_address);
 
         match HttpServer::new(move || {
-            App::new()
-                .app_data(handler.clone())
-                .service(web::resource("/api/v1").to(|| async { "hello world" }))
+            let api_v1 =
+                web::scope("/api/v1").route("/movie", web::get().to(Self::handle_show_list));
+
+            App::new().app_data(handler.clone()).service(api_v1)
         })
         .bind(self.options.http_address.clone())?
         .run()
@@ -97,5 +98,11 @@ where
                 Ok(handler)
             }
         }
+    }
+
+    async fn handle_show_list(
+        handler: web::Data<RwLock<ServiceHandler<I, S>>>,
+    ) -> Result<impl Responder> {
+        handler.read().unwrap().handle_show_list().await
     }
 }
