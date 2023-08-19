@@ -35,6 +35,22 @@ impl MovieStorage for FileStorage {
         Ok(Self { root_dir })
     }
 
+    fn allocate_movie_data(&self, id: MovieId) -> Result<(), Error> {
+        let movie_data_path = self.get_movie_data_path(&id);
+
+        create_dir_all(&movie_data_path).map_err(|e| {
+            Error::Internal(format!(
+                "Failed to create movie data directory '{}': {}",
+                movie_data_path.display(),
+                e
+            ))
+        })?;
+
+        info!("Created movie data directory '{}'", id);
+
+        Ok(())
+    }
+
     fn write_movie_data(&self, id: MovieId, data_type: MovieDataType) -> Result<Self::W, Error> {
         let file_path = self.get_file_path(&id, data_type, true)?;
 

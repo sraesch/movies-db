@@ -23,6 +23,12 @@ pub trait MovieStorage: Send + Sync {
     where
         Self: Sized;
 
+    /// Allocates space for a new movie.
+    ///
+    /// # Arguments
+    /// * `id` - The movie id for which to allocate the data.
+    fn allocate_movie_data(&self, id: MovieId) -> Result<(), Error>;
+
     /// Returns a writer for the given movie id and data type to store the data.
     ///
     /// # Arguments

@@ -1,18 +1,16 @@
 use std::{marker::PhantomData, sync::RwLock};
 
-use actix_web::{
-    get, post,
-    web::{self, Json},
-    App, HttpServer, Responder, Result,
-};
+use actix_web::{web, App, HttpServer, Responder, Result};
 
 use log::{debug, error, info, trace};
 
-use crate::{Error, Movie, MovieSearchQuery, MovieStorage, MoviesIndex, Options};
+use crate::{Error, Movie, MovieId, MovieSearchQuery, MovieStorage, MoviesIndex, Options};
 
 pub type BoxError = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 use super::service_handler::ServiceHandler;
+
+use serde::{Deserialize, Serialize};
 
 pub struct Service<I: Sized + 'static, S: Sized + 'static>
 where
@@ -21,6 +19,12 @@ where
 {
     options: Options,
     phantom: PhantomData<(I, S)>,
+}
+
+/// The query for the GET /api/v1/movie endpoint.
+#[derive(Debug, Deserialize, Serialize)]
+struct MovieIdQuery {
+    id: MovieId,
 }
 
 impl<I, S> Service<I, S>
@@ -69,6 +73,8 @@ where
         match HttpServer::new(move || {
             let api_v1 = web::scope("/api/v1")
                 .route("/movie", web::post().to(Self::handle_post_movie))
+                .route("/movie", web::get().to(Self::handle_get_movie))
+                .route("/movie", web::delete().to(Self::handle_delete_movie))
                 .route("/movie/search", web::get().to(Self::handle_search_movie));
 
             App::new().app_data(handler.clone()).service(api_v1)
@@ -124,6 +130,11 @@ where
         handler.handle_add_movie(movie)
     }
 
+    /// Handles the GET /api/v1/movie endpoint.
+    ///
+    /// # Arguments
+    /// * `handler` - The service handler.
+    /// * `query` - The query parameters.
     async fn handle_search_movie(
         handler: web::Data<RwLock<ServiceHandler<I, S>>>,
         query: web::Query<MovieSearchQuery>,
@@ -136,5 +147,43 @@ where
         let handler = handler.read().unwrap();
 
         handler.handle_search_movies(query)
+    }
+
+    /// Handles the GET /api/v1/movie endpoint.
+    ///
+    /// # Arguments
+    /// * `handler` - The service handler.
+    /// * `query` - The query parameters.
+    async fn handle_get_movie(
+        handler: web::Data<RwLock<ServiceHandler<I, S>>>,
+        query: web::Query<MovieIdQuery>,
+    ) -> Result<impl Responder> {
+        debug!("Handling GET /api/v1/movie");
+        trace!("Request query: {:?}", query);
+
+        let id: MovieId = query.into_inner().id;
+
+        let handler = handler.read().unwrap();
+
+        handler.handle_get_movie(id)
+    }
+
+    /// Handles the DELETE /api/v1/movie endpoint.
+    ///
+    /// # Arguments
+    /// * `handler` - The service handler.
+    /// * `query` - The query parameters.
+    async fn handle_delete_movie(
+        handler: web::Data<RwLock<ServiceHandler<I, S>>>,
+        query: web::Query<MovieIdQuery>,
+    ) -> Result<impl Responder> {
+        debug!("Handling DELETE /api/v1/movie");
+        trace!("Request query: {:?}", query);
+
+        let id: MovieId = query.into_inner().id;
+
+        let mut handler = handler.write().unwrap();
+
+        handler.handle_delete_movie(id)
     }
 }

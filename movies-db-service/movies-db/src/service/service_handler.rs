@@ -40,21 +40,41 @@ where
     /// # Arguments
     /// * `movie` - The movie to add.
     pub fn handle_add_movie(&mut self, movie: Movie) -> Result<impl Responder> {
-        let movie_id = match self.index.add_movie(movie) {
-            Ok(movie_id) => movie_id,
-            Err(err) => match err {
-                Error::InvalidArgument(e) => {
-                    error!("Invalid argument: {}", e);
-                    return Err(actix_web::error::ErrorBadRequest(e));
-                }
-                _ => {
-                    error!("Internal error: {}", err);
-                    return Err(actix_web::error::ErrorInternalServerError(err));
+        match self.index.add_movie(movie) {
+            Ok(movie_id) => match self.storage.allocate_movie_data(movie_id.clone()) {
+                Ok(()) => Ok(web::Json(movie_id)),
+                Err(err) => Self::handle_error(err),
+            },
+            Err(err) => Self::handle_error(err),
+        }
+    }
+
+    /// Handles the request to get a new movie.
+    ///
+    /// # Arguments
+    /// * `movie` - The movie to get.
+    pub fn handle_get_movie(&self, id: MovieId) -> Result<impl Responder> {
+        match self.index.get_movie(&id) {
+            Ok(movie) => Ok(web::Json(movie)),
+            Err(err) => Self::handle_error(err),
+        }
+    }
+
+    /// Handles the request to delete a new movie.
+    ///
+    /// # Arguments
+    /// * `movie` - The movie to get.
+    pub fn handle_delete_movie(&mut self, id: MovieId) -> Result<impl Responder> {
+        match self.index.remove_movie(&id) {
+            Ok(()) => match self.storage.remove_movie_data(id) {
+                Ok(_) => Ok(actix_web::HttpResponse::Ok()),
+                Err(err) => {
+                    error!("Error deleting movie: {}", err);
+                    Err(actix_web::error::ErrorInternalServerError(err))
                 }
             },
-        };
-
-        Ok(web::Json(movie_id))
+            Err(err) => Self::handle_error(err),
+        }
     }
 
     /// Handles the request to show the list of all movies.
@@ -62,8 +82,8 @@ where
         let movies_ids = match self.index.search_movies(query) {
             Ok(movies_ids) => movies_ids,
             Err(err) => {
-                error!("Internal error: {}", err);
-                return Err(actix_web::error::ErrorInternalServerError(err));
+                error!("Error searching: {}", err);
+                return Self::handle_error(err);
             }
         };
 
@@ -79,5 +99,22 @@ where
             .collect();
 
         Ok(web::Json(movies))
+    }
+
+    fn handle_error<T: Responder>(err: Error) -> Result<T> {
+        match err {
+            Error::InvalidArgument(e) => {
+                error!("Invalid argument: {}", e);
+                Err(actix_web::error::ErrorBadRequest(e))
+            }
+            Error::NotFound(e) => {
+                error!("Not found: {}", e);
+                Err(actix_web::error::ErrorNotFound(e))
+            }
+            _ => {
+                error!("Internal error: {}", err);
+                Err(actix_web::error::ErrorInternalServerError(err))
+            }
+        }
     }
 }
