@@ -58,7 +58,7 @@ where
     }
 
     /// Handles the request to show the list of all movies.
-    pub async fn handle_search_movies(&self, query: MovieSearchQuery) -> Result<impl Responder> {
+    pub fn handle_search_movies(&self, query: MovieSearchQuery) -> Result<impl Responder> {
         let movies_ids = match self.index.search_movies(query) {
             Ok(movies_ids) => movies_ids,
             Err(err) => {

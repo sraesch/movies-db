@@ -67,8 +67,9 @@ where
         info!("Listening on {}", self.options.http_address);
 
         match HttpServer::new(move || {
-            let api_v1 =
-                web::scope("/api/v1").route("/movie", web::post().to(Self::handle_post_movie));
+            let api_v1 = web::scope("/api/v1")
+                .route("/movie", web::post().to(Self::handle_post_movie))
+                .route("/movie/search", web::get().to(Self::handle_search_movie));
 
             App::new().app_data(handler.clone()).service(api_v1)
         })
@@ -121,5 +122,19 @@ where
         let mut handler: std::sync::RwLockWriteGuard<'_, ServiceHandler<I, S>> =
             handler.write().unwrap();
         handler.handle_add_movie(movie)
+    }
+
+    async fn handle_search_movie(
+        handler: web::Data<RwLock<ServiceHandler<I, S>>>,
+        query: web::Query<MovieSearchQuery>,
+    ) -> Result<impl Responder> {
+        debug!("Handling GET /api/v1/movie/search");
+        trace!("Request query: {:?}", query);
+
+        let query: MovieSearchQuery = query.into_inner();
+
+        let handler = handler.read().unwrap();
+
+        handler.handle_search_movies(query)
     }
 }

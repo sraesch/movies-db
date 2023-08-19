@@ -1,5 +1,3 @@
-use std::ops::Range;
-
 use crate::{Error, MovieId, Options};
 
 use chrono::{DateTime, Utc};
@@ -37,6 +35,12 @@ pub enum SortingField {
     Date,
 }
 
+impl Default for SortingField {
+    fn default() -> Self {
+        Self::Date
+    }
+}
+
 /// The sorting order for the movies.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
 pub enum SortingOrder {
@@ -47,27 +51,22 @@ pub enum SortingOrder {
     Descending,
 }
 
-/// A sorting for the movies.
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-pub struct MovieSorting {
-    pub field: SortingField,
-    pub order: SortingOrder,
-}
-
-impl Default for MovieSorting {
+impl Default for SortingOrder {
     fn default() -> Self {
-        Self {
-            field: SortingField::Date,
-            order: SortingOrder::Descending,
-        }
+        Self::Descending
     }
 }
 
 /// A query for searching movies in the database.
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct MovieSearchQuery {
-    /// The sorting being used for the movies.
-    pub sorting: MovieSorting,
+    /// The field used for sorting
+    #[serde(default)]
+    pub sorting_field: SortingField,
+
+    /// The order used for sorting
+    #[serde(default)]
+    pub sorting_order: SortingOrder,
 
     /// Optionally, a search string for the title of the movie. If provided, only movies whose
     /// title matches the search string will be returned.
@@ -78,8 +77,11 @@ pub struct MovieSearchQuery {
     #[serde(default)]
     pub tags: Vec<String>,
 
-    /// Optionally, a range for the items to return can be specified.
-    pub range: Option<Range<usize>>,
+    /// Optionally, the start index of the movies to return.
+    pub start_index: Option<usize>,
+
+    /// Optionally, the maximal number of results to return.
+    pub num_results: Option<usize>,
 }
 
 /// The movies index manages a list of all movies in the database.
@@ -147,10 +149,8 @@ mod test {
     fn test_query_serialization() {
         let query_string = r#"
             {
-                "sorting": {
-                    "field": "title",
-                    "order": "ascending"
-                },
+                "sorting_field": "title",
+                "sorting_order": "ascending",
                 "title": "foo",
                 "tags": ["bar", "baz"]
             }
@@ -160,15 +160,13 @@ mod test {
 
         assert_eq!(query.title, Some("foo".to_string()));
         assert_eq!(query.tags, vec!["bar".to_string(), "baz".to_string()]);
-        assert_eq!(query.sorting.field, SortingField::Title);
-        assert_eq!(query.sorting.order, SortingOrder::Ascending);
+        assert_eq!(query.sorting_field, SortingField::Title);
+        assert_eq!(query.sorting_order, SortingOrder::Ascending);
 
         let query_string = r#"
             {
-                "sorting": {
-                    "field": "date",
-                    "order": "descending"
-                },
+                "sorting_field": "date",
+                "sorting_order": "descending",
                 "title": "foo"
             }
         "#;
@@ -177,7 +175,7 @@ mod test {
 
         assert_eq!(query.title, Some("foo".to_string()));
         assert!(query.tags.is_empty());
-        assert_eq!(query.sorting.field, SortingField::Date);
-        assert_eq!(query.sorting.order, SortingOrder::Descending);
+        assert_eq!(query.sorting_field, SortingField::Date);
+        assert_eq!(query.sorting_order, SortingOrder::Descending);
     }
 }
