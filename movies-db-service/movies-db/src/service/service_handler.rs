@@ -1,4 +1,4 @@
-use crate::{Error, MovieId, MovieStorage, MoviesIndex, Options};
+use crate::{Error, Movie, MovieId, MovieSearchQuery, MovieStorage, MoviesIndex, Options};
 
 use actix_web::{web, Responder, Result};
 use log::error;
@@ -35,9 +35,31 @@ where
         Ok(Self { index, storage })
     }
 
+    /// Handles the request to add a new movie.
+    ///
+    /// # Arguments
+    /// * `movie` - The movie to add.
+    pub fn handle_add_movie(&mut self, movie: Movie) -> Result<impl Responder> {
+        let movie_id = match self.index.add_movie(movie) {
+            Ok(movie_id) => movie_id,
+            Err(err) => match err {
+                Error::InvalidArgument(e) => {
+                    error!("Invalid argument: {}", e);
+                    return Err(actix_web::error::ErrorBadRequest(e));
+                }
+                _ => {
+                    error!("Internal error: {}", err);
+                    return Err(actix_web::error::ErrorInternalServerError(err));
+                }
+            },
+        };
+
+        Ok(web::Json(movie_id))
+    }
+
     /// Handles the request to show the list of all movies.
-    pub async fn handle_show_list(&self) -> Result<impl Responder> {
-        let movies_ids = match self.index.search_movies(Default::default()) {
+    pub async fn handle_search_movies(&self, query: MovieSearchQuery) -> Result<impl Responder> {
+        let movies_ids = match self.index.search_movies(query) {
             Ok(movies_ids) => movies_ids,
             Err(err) => {
                 error!("Internal error: {}", err);

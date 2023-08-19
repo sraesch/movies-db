@@ -1,10 +1,14 @@
 use std::{marker::PhantomData, sync::RwLock};
 
-use actix_web::{get, post, web, App, HttpServer, Responder, Result};
+use actix_web::{
+    get, post,
+    web::{self, Json},
+    App, HttpServer, Responder, Result,
+};
 
-use log::{error, info};
+use log::{debug, error, info, trace};
 
-use crate::{Error, MovieStorage, MoviesIndex, Options};
+use crate::{Error, Movie, MovieSearchQuery, MovieStorage, MoviesIndex, Options};
 
 pub type BoxError = Box<dyn std::error::Error + Send + Sync + 'static>;
 
@@ -64,7 +68,7 @@ where
 
         match HttpServer::new(move || {
             let api_v1 =
-                web::scope("/api/v1").route("/movie", web::get().to(Self::handle_get_movie));
+                web::scope("/api/v1").route("/movie", web::post().to(Self::handle_post_movie));
 
             App::new().app_data(handler.clone()).service(api_v1)
         })
@@ -100,9 +104,22 @@ where
         }
     }
 
-    async fn handle_get_movie(
+    /// Handles the POST /api/v1/movie endpoint.
+    ///
+    /// # Arguments
+    /// * `handler` - The service handler.
+    /// * `movie` - The movie to add.
+    async fn handle_post_movie(
         handler: web::Data<RwLock<ServiceHandler<I, S>>>,
+        movie: web::Json<Movie>,
     ) -> Result<impl Responder> {
-        handler.read().unwrap().handle_show_list().await
+        debug!("Handling POST /api/v1/movie");
+        trace!("Request body: {:?}", movie);
+
+        let movie: Movie = movie.into_inner();
+
+        let mut handler: std::sync::RwLockWriteGuard<'_, ServiceHandler<I, S>> =
+            handler.write().unwrap();
+        handler.handle_add_movie(movie)
     }
 }

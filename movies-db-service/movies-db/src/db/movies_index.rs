@@ -12,9 +12,11 @@ pub struct Movie {
     pub title: String,
 
     /// An optional description of the movie.
+    #[serde(default)]
     pub description: String,
 
     /// A list of tags associated with the movie.
+    #[serde(default)]
     pub tags: Vec<String>,
 }
 
