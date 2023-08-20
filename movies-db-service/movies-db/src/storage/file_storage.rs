@@ -5,12 +5,18 @@ use std::{
 
 use log::info;
 
-use crate::{Error, MovieId, Options};
+use crate::{Error, MovieId, Options, ReadResource};
 
 use super::movies_storage::{MovieDataType, MovieStorage};
 
 pub struct FileStorage {
     root_dir: PathBuf,
+}
+
+impl ReadResource for File {
+    fn get_size(&self) -> usize {
+        self.metadata().map(|m| m.len() as usize).unwrap_or(0)
+    }
 }
 
 impl MovieStorage for FileStorage {

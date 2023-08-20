@@ -10,10 +10,15 @@ pub enum MovieDataType {
     },
 }
 
+/// The trait for reading movie data.
+pub trait ReadResource: Read {
+    fn get_size(&self) -> usize;
+}
+
 /// The trait for storing movie data.
 pub trait MovieStorage: Send + Sync {
     type W: Write;
-    type R: Read;
+    type R: ReadResource;
 
     /// Creates a new instance of the storage.
     ///
