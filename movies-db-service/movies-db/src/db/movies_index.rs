@@ -3,6 +3,8 @@ use crate::{Error, MovieId, Options};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use async_trait::async_trait;
+
 /// A single entry in the movie database.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Movie {
@@ -97,6 +99,7 @@ pub struct MovieSearchQuery {
 
 /// The movies index manages a list of all movies in the database.
 /// Additionally, it provides methods for managing and searching movies.
+#[async_trait]
 pub trait MoviesIndex: Send + Sync {
     /// Creates a new instance of the movies index
     ///
@@ -110,20 +113,20 @@ pub trait MoviesIndex: Send + Sync {
     ///
     /// # Arguments
     /// `movie` - The movie to add to the index
-    fn add_movie(&mut self, movie: Movie) -> Result<MovieId, Error>;
+    async fn add_movie(&mut self, movie: Movie) -> Result<MovieId, Error>;
 
     /// Returns the the movie for the given ID.
     ///
     /// # Arguments
     /// `id` - The ID of the movie to return.
-    fn get_movie(&self, id: &MovieId) -> Result<MovieDetailed, Error>;
+    async fn get_movie(&self, id: &MovieId) -> Result<MovieDetailed, Error>;
 
     /// Updates the movie file info for the given ID.
     ///
     /// # Arguments
     /// `id` - The ID of the movie to update.
     /// `movie_file_info` - The new movie file info.
-    fn update_movie_file_info(
+    async fn update_movie_file_info(
         &mut self,
         id: &MovieId,
         movie_file_info: MovieFileInfo,
@@ -133,34 +136,38 @@ pub trait MoviesIndex: Send + Sync {
     ///
     /// # Arguments
     /// `id` - The ID of the movie to remove.
-    fn remove_movie(&mut self, id: &MovieId) -> Result<(), Error>;
+    async fn remove_movie(&mut self, id: &MovieId) -> Result<(), Error>;
 
     /// Changes the description of the movie for the given ID.
     ///
     /// # Arguments
     /// `id` - The ID of the movie to change.
     /// `description` - The new description of the movie.
-    fn change_movie_description(&mut self, id: &MovieId, description: String) -> Result<(), Error>;
+    async fn change_movie_description(
+        &mut self,
+        id: &MovieId,
+        description: String,
+    ) -> Result<(), Error>;
 
     /// Changes the title of the movie for the given ID.
     ///
     /// # Arguments
     /// `id` - The ID of the movie to change.
     /// `title` - The new title of the movie.
-    fn change_movie_title(&mut self, id: &MovieId, title: String) -> Result<(), Error>;
+    async fn change_movie_title(&mut self, id: &MovieId, title: String) -> Result<(), Error>;
 
     /// Changes the tags of the movie for the given ID.
     ///
     /// # Arguments
     /// `id` - The ID of the movie to change.
     /// `tags` - The new tags of the movie.
-    fn change_movie_tags(&mut self, id: &MovieId, tags: Vec<String>) -> Result<(), Error>;
+    async fn change_movie_tags(&mut self, id: &MovieId, tags: Vec<String>) -> Result<(), Error>;
 
     /// Searches the movies index for movies matching the given query.
     ///
     /// # Arguments
     /// `query` - The query to search for.
-    fn search_movies(&self, query: MovieSearchQuery) -> Result<Vec<MovieId>, Error>;
+    async fn search_movies(&self, query: MovieSearchQuery) -> Result<Vec<MovieId>, Error>;
 }
 
 #[cfg(test)]

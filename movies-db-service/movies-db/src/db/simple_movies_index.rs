@@ -4,6 +4,8 @@ use chrono::DateTime;
 use log::{debug, error, info};
 use wildmatch::WildMatch;
 
+use async_trait::async_trait;
+
 use crate::{
     generate_movie_id, Error, Movie, MovieDetailed, MovieFileInfo, MovieId, MovieSearchQuery,
     MoviesIndex, Options, SortingField, SortingOrder,
@@ -25,6 +27,7 @@ impl SimpleMoviesIndex {
     }
 }
 
+#[async_trait]
 impl MoviesIndex for SimpleMoviesIndex {
     fn new(_: &Options) -> Result<Self, Error> {
         Ok(Self {
@@ -32,7 +35,7 @@ impl MoviesIndex for SimpleMoviesIndex {
         })
     }
 
-    fn add_movie(&mut self, movie: Movie) -> Result<MovieId, Error> {
+    async fn add_movie(&mut self, movie: Movie) -> Result<MovieId, Error> {
         let id = generate_movie_id();
         info!("Adding movie {} with id {}", movie.title, id);
 
@@ -62,7 +65,7 @@ impl MoviesIndex for SimpleMoviesIndex {
         Ok(id)
     }
 
-    fn get_movie(&self, id: &MovieId) -> Result<MovieDetailed, Error> {
+    async fn get_movie(&self, id: &MovieId) -> Result<MovieDetailed, Error> {
         info!("Getting movie with id {}", id);
 
         match self.movies.get(id) {
@@ -74,7 +77,7 @@ impl MoviesIndex for SimpleMoviesIndex {
         }
     }
 
-    fn update_movie_file_info(
+    async fn update_movie_file_info(
         &mut self,
         id: &MovieId,
         movie_file_info: MovieFileInfo,
@@ -93,7 +96,7 @@ impl MoviesIndex for SimpleMoviesIndex {
         }
     }
 
-    fn remove_movie(&mut self, id: &MovieId) -> Result<(), Error> {
+    async fn remove_movie(&mut self, id: &MovieId) -> Result<(), Error> {
         info!("Removing movie with id {}", id);
 
         match self.movies.remove(id) {
@@ -105,7 +108,11 @@ impl MoviesIndex for SimpleMoviesIndex {
         }
     }
 
-    fn change_movie_description(&mut self, id: &MovieId, description: String) -> Result<(), Error> {
+    async fn change_movie_description(
+        &mut self,
+        id: &MovieId,
+        description: String,
+    ) -> Result<(), Error> {
         info!("Changing description of movie with id {}", id);
         debug!("New description: {:?}", description);
 
@@ -121,7 +128,7 @@ impl MoviesIndex for SimpleMoviesIndex {
         }
     }
 
-    fn change_movie_title(&mut self, id: &MovieId, title: String) -> Result<(), Error> {
+    async fn change_movie_title(&mut self, id: &MovieId, title: String) -> Result<(), Error> {
         info!("Changing title of movie with id {}", id);
         debug!("New title: {:?}", title);
 
@@ -137,7 +144,7 @@ impl MoviesIndex for SimpleMoviesIndex {
         }
     }
 
-    fn change_movie_tags(&mut self, id: &MovieId, tags: Vec<String>) -> Result<(), Error> {
+    async fn change_movie_tags(&mut self, id: &MovieId, tags: Vec<String>) -> Result<(), Error> {
         info!("Changing tags of movie with id {}", id);
 
         let mut tags = tags;
@@ -156,7 +163,7 @@ impl MoviesIndex for SimpleMoviesIndex {
         }
     }
 
-    fn search_movies(&self, mut query: MovieSearchQuery) -> Result<Vec<MovieId>, Error> {
+    async fn search_movies(&self, mut query: MovieSearchQuery) -> Result<Vec<MovieId>, Error> {
         info!("Searching movies with query {:?}", query);
         Self::process_tags(&mut query.tags);
 
@@ -279,30 +286,31 @@ mod test {
         Movie { title: "Das Boot".to_owned(), description: "A German U-boat stalks the frigid waters of the North Atlantic as its young crew experience the sheer terror and claustrophobic life of a submariner in World War II.".to_owned(), tags: vec!["drama".to_owned(), "war".to_owned(), "germany".to_owned(), "movie".to_owned()] }]
     }
 
-    #[test]
-    fn test_add_movie() {
+    #[tokio::test]
+    async fn test_add_movie() {
         let mut index = SimpleMoviesIndex::new(&Options::default()).unwrap();
 
         let movies = create_test_movies();
 
         for movie in movies {
-            let ret = index.add_movie(movie.clone());
+            let ret = index.add_movie(movie.clone()).await;
             assert!(ret.is_ok());
         }
     }
 
-    #[test]
-    fn test_get_movie() {
+    #[tokio::test]
+    async fn test_get_movie() {
         let mut index = SimpleMoviesIndex::new(&Options::default()).unwrap();
         let movies = create_test_movies();
 
-        let movie_ids: Vec<MovieId> = movies
-            .iter()
-            .map(|m| index.add_movie(m.clone()).unwrap())
-            .collect();
+        let mut movie_ids: Vec<MovieId> = Vec::with_capacity(movies.len());
+        for movie in movies.iter() {
+            let id = index.add_movie(movie.clone()).await.unwrap();
+            movie_ids.push(id);
+        }
 
         for (id, movie) in movie_ids.iter().zip(movies.iter()) {
-            let db_movie = index.get_movie(id).unwrap();
+            let db_movie = index.get_movie(id).await.unwrap();
 
             assert_eq!(movie.title, db_movie.movie.title);
             assert_eq!(movie.description, db_movie.movie.description);
@@ -313,48 +321,57 @@ mod test {
         }
     }
 
-    #[test]
-    fn test_remove_movie() {
+    #[tokio::test]
+    async fn test_remove_movie() {
         let mut index = SimpleMoviesIndex::new(&Options::default()).unwrap();
         let movies = create_test_movies();
 
-        let mut movie_ids: Vec<MovieId> = movies
-            .iter()
-            .map(|m| index.add_movie(m.clone()).unwrap())
-            .collect();
+        let mut movie_ids: Vec<MovieId> = Vec::with_capacity(movies.len());
+        for movie in movies.iter() {
+            let id = index.add_movie(movie.clone()).await.unwrap();
+            movie_ids.push(id);
+        }
 
         movie_ids.sort();
 
-        index.remove_movie(&movie_ids[0]).unwrap();
-        assert!(index.remove_movie(&movie_ids[0]).is_err());
+        index.remove_movie(&movie_ids[0]).await.unwrap();
+        assert!(index.remove_movie(&movie_ids[0]).await.is_err());
 
         let movie_ids = &movie_ids[1..];
-        let mut listed_movie_ids = index.search_movies(Default::default()).unwrap();
+        let mut listed_movie_ids = index.search_movies(Default::default()).await.unwrap();
         listed_movie_ids.sort();
 
         assert_eq!(movie_ids, listed_movie_ids);
     }
 
-    #[test]
-    fn test_query_movies() {
+    async fn movie_ids_to_titles(index: &SimpleMoviesIndex, movie_ids: &[MovieId]) -> Vec<String> {
+        let mut movie_titles: Vec<String> = Vec::with_capacity(movie_ids.len());
+
+        for movie_id in movie_ids {
+            let movie = index.get_movie(movie_id).await.unwrap();
+            movie_titles.push(movie.movie.title.clone());
+        }
+
+        movie_titles
+    }
+
+    #[tokio::test]
+    async fn test_query_movies() {
         let mut index = SimpleMoviesIndex::new(&Options::default()).unwrap();
         let movies = create_test_movies();
 
-        movies.iter().for_each(|m| {
-            let ret = index.add_movie(m.clone());
+        for movie in movies.iter() {
+            let ret = index.add_movie(movie.clone()).await;
             assert!(ret.is_ok());
-        });
+        }
 
         // test query 1A: Search all movies (ascending order by title)
         let mut query: MovieSearchQuery = Default::default();
         query.sorting_field = SortingField::Title;
         query.sorting_order = SortingOrder::Ascending;
-        let movie_title: Vec<String> = index
-            .search_movies(query)
-            .unwrap()
-            .iter()
-            .map(|id| index.get_movie(id).unwrap().movie.title)
-            .collect();
+        let movie_title: Vec<String> =
+            movie_ids_to_titles(&index, &index.search_movies(query).await.unwrap()).await;
+
         assert_eq!(
             movie_title,
             vec![
@@ -369,12 +386,9 @@ mod test {
         let mut query: MovieSearchQuery = Default::default();
         query.sorting_field = SortingField::Title;
         query.sorting_order = SortingOrder::Descending;
-        let movie_title: Vec<String> = index
-            .search_movies(query)
-            .unwrap()
-            .iter()
-            .map(|id| index.get_movie(id).unwrap().movie.title)
-            .collect();
+        let movie_title: Vec<String> =
+            movie_ids_to_titles(&index, &index.search_movies(query).await.unwrap()).await;
+
         assert_eq!(
             movie_title,
             vec![
@@ -390,11 +404,8 @@ mod test {
         query.tags = vec!["Sci-Fi".to_owned()];
         query.sorting_field = SortingField::Title;
         query.sorting_order = SortingOrder::Ascending;
-        let search_result = index.search_movies(query).unwrap();
-        let title_list = search_result
-            .iter()
-            .map(|id| index.get_movie(id).unwrap().movie.title.clone())
-            .collect::<Vec<String>>();
+        let search_result = index.search_movies(query).await.unwrap();
+        let title_list: Vec<String> = movie_ids_to_titles(&index, &search_result).await;
         assert_eq!(
             title_list,
             vec![
@@ -412,7 +423,7 @@ mod test {
             start_index: None,
             num_results: None,
         };
-        assert_eq!(index.search_movies(query).unwrap().len(), 0);
+        assert_eq!(index.search_movies(query).await.unwrap().len(), 0);
         let query = MovieSearchQuery {
             sorting_field: Default::default(),
             sorting_order: Default::default(),
@@ -422,12 +433,7 @@ mod test {
             num_results: None,
         };
         assert_eq!(
-            index
-                .search_movies(query)
-                .unwrap()
-                .iter()
-                .map(|id| index.get_movie(id).unwrap().movie.title)
-                .collect::<Vec<String>>(),
+            movie_ids_to_titles(&index, &index.search_movies(query).await.unwrap()).await,
             ["Das Boot"]
         );
 
@@ -441,12 +447,7 @@ mod test {
             num_results: Some(1),
         };
         assert_eq!(
-            index
-                .search_movies(query)
-                .unwrap()
-                .iter()
-                .map(|id| index.get_movie(id).unwrap().movie.title)
-                .collect::<Vec<String>>(),
+            movie_ids_to_titles(&index, &index.search_movies(query).await.unwrap()).await,
             ["Das Boot"]
         );
         let query = MovieSearchQuery {
@@ -458,12 +459,7 @@ mod test {
             num_results: Some(2),
         };
         assert_eq!(
-            index
-                .search_movies(query)
-                .unwrap()
-                .iter()
-                .map(|id| index.get_movie(id).unwrap().movie.title)
-                .collect::<Vec<String>>(),
+            movie_ids_to_titles(&index, &index.search_movies(query).await.unwrap()).await,
             ["Doctor Who", "E.T. the Extra-Terrestrial"]
         );
     }
