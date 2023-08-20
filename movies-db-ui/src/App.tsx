@@ -1,24 +1,24 @@
-import React from 'react';
-import logo from './logo.svg';
+import * as React from 'react';
 import './App.css';
+import AddVideoDialog from './components/AddVideoDialog';
+import { Button } from '@mui/material';
+import { MovieSubmit } from './service/types';
+import { service } from './service/service';
 
 function App() {
+  const [open, setOpen] = React.useState(false);
+
+  const handleAddVideo = async (info: MovieSubmit, file: File): Promise<void> => {
+    console.log(`Submit Video: ${JSON.stringify(info)}`);
+    await service.submitMovie(info);
+  };
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <main>
+        <Button variant='contained' onClick={() => setOpen(true)}>Add Video</Button>
+        <AddVideoDialog open={open} onClose={() => setOpen(false)} onSubmit={handleAddVideo} />
+      </main>
     </div>
   );
 }
