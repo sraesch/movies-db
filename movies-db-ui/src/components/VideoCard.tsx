@@ -8,7 +8,7 @@ import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import ClearIcon from '@mui/icons-material/Clear';
 import { MovieDetailed, MovieId } from '../service/types';
-import { Chip } from '@mui/material';
+import { CardActionArea, Chip } from '@mui/material';
 import { service } from '../service/service';
 
 import NoVideo from '../img/no_video.png';
@@ -17,6 +17,7 @@ import NoVideo from '../img/no_video.png';
 export interface VideoCardProps {
     movieId: MovieId;
     onDelete?: () => void;
+    onShow?: () => void;
 }
 
 export default function VideoCard(props: VideoCardProps): JSX.Element {
@@ -49,6 +50,12 @@ export default function VideoCard(props: VideoCardProps): JSX.Element {
     const { movie } = movieInfo;
     const description = movie.description ? (movie.description.length > 100 ? movie.description.substring(0, 100) + '...' : movie.description) : '';
 
+    const handleOnShow = () => {
+        if (props.onShow) {
+            props.onShow();
+        }
+    };
+
     return (
         <Card sx={{ maxWidth: 345 }}>
             <CardHeader
@@ -60,26 +67,29 @@ export default function VideoCard(props: VideoCardProps): JSX.Element {
                 title={movie.title}
                 subheader={movieDate.toLocaleDateString() + ' ' + movieDate.toLocaleTimeString()}
             />
-            {movieURL ? <CardMedia
-                component="video"
-                height="194"
-                src={movieURL}
-            /> : <CardMedia
-                component="img"
-                height="194"
-                image={NoVideo}
-                alt="Video not found"
-            />}
-            <CardContent>
-                <Typography variant="body2" color="text.secondary">
-                    {description}
-                </Typography>
-            </CardContent>
+            <CardActionArea onClick={handleOnShow}>
+                {movieURL ? <CardMedia
+                    component="video"
+                    height="194"
+                    src={movieURL}
+                /> : <CardMedia
+                    component="img"
+                    height="194"
+                    image={NoVideo}
+                    alt="Video not found"
+                />}
+                <CardContent>
+                    <Typography variant="body2" color="text.secondary">
+                        {description}
+                    </Typography>
+                </CardContent>
+            </CardActionArea>
             <CardActions disableSpacing>
                 {movie.tags ? movie.tags.map((tag, index) => {
                     return <Chip key={index} label={tag} />
                 }) : <div></div>}
             </CardActions>
+
         </Card>
     );
 }

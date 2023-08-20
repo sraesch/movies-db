@@ -4,11 +4,13 @@ import VideoCard from './VideoCard';
 import { service } from '../service/service';
 import { MovieId, MovieSearchQuery, SortingField, SortingOrder } from '../service/types';
 import YesNoDialog from './YesNoDialog';
+import VideoPlayer from './VideoPlayer';
 
 export default function VideosList(): JSX.Element {
     const [movieIds, setMovieIds] = React.useState<string[]>([]);
     const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
     const [movieToDelete, setMovieToDelete] = React.useState<MovieId | null>(null);
+    const [movieToPlay, setMovieToPlay] = React.useState<MovieId | null>(null);
 
     // update list of movies
     const updateList = async () => {
@@ -45,6 +47,11 @@ export default function VideosList(): JSX.Element {
         await updateList();
     };
 
+    const handleOnShow = (movieId: MovieId) => {
+        console.log(`Showing movie ${movieId}`);
+        setMovieToPlay(movieId);
+    };
+
     return (<Paper style={{
         display: 'flex',
         flexDirection: 'row',
@@ -58,13 +65,16 @@ export default function VideosList(): JSX.Element {
             open={deleteDialogOpen}
             onClose={() => setDeleteDialogOpen(false)}
             onAccept={() => handleOnDelete2()} />
-        {movieIds.map((movieId) => {
-            return (<div key={movieId} style={{
-                margin: '16px',
-            }}>
-                <VideoCard movieId={movieId} onDelete={() => handleOnDelete1(movieId)} />
-            </div>);
-        })}
+        {movieToPlay ? <VideoPlayer open={movieToPlay !== null} movieId={movieToPlay} onClose={() => setMovieToPlay(null)} /> : <></>}
+        {
+            movieIds.map((movieId) => {
+                return (<div key={movieId} style={{
+                    margin: '16px',
+                }}>
+                    <VideoCard movieId={movieId} onDelete={() => handleOnDelete1(movieId)} onShow={() => handleOnShow(movieId)} />
+                </div>);
+            })
+        }
 
-    </Paper>)
+    </Paper >)
 }
