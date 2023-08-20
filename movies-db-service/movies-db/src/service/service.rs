@@ -73,7 +73,7 @@ where
         info!("Listening on {}", self.options.http_address);
 
         match HttpServer::new(move || {
-            let mut cors = Cors::default()
+            let cors = Cors::default()
                 .allow_any_header()
                 .allow_any_method()
                 .allow_any_origin();
@@ -234,7 +234,7 @@ where
 
         let id: MovieId = query.into_inner().id;
 
-        let mut handler = handler.read().unwrap();
+        let handler = handler.read().unwrap();
 
         handler.handle_download_movie(id).await
     }

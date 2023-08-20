@@ -6,16 +6,15 @@ use crate::{
 use actix_multipart::Multipart;
 use actix_web::body::SizedStream;
 use actix_web::http::header;
-use actix_web::web::Bytes;
 use actix_web::HttpResponse;
 use actix_web::{web, Responder, Result};
-use futures::{Stream, StreamExt, TryStreamExt};
+use futures::{StreamExt, TryStreamExt};
 use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
-use std::ops::DerefMut;
 use std::path::PathBuf;
 use tokio::io::AsyncWriteExt;
-use tokio_util::codec::{BytesCodec, FramedRead};
+
+use tokio_util::io::ReaderStream;
 
 pub struct ServiceHandler<I, S>
 where
@@ -249,19 +248,13 @@ where
         };
 
         // create response
-        let mut res = HttpResponse::Ok();
-        res.content_type(movie_file_info.mime_type);
+        let length = movie_data.get_size().await as u64;
+        let reader_stream = ReaderStream::new(movie_data);
+        let sized_stream = SizedStream::new(length, reader_stream);
 
-        FramedRead::new(movie_data, BytesCodec::new());
-
-        todo!("Implement streaming of movie data");
-
-        // let stream =
-        // SizedStream::new(movie_data.get_size() as u64, stream);
-
-        // Ok(HttpResponse::Ok().content_type(movie_file_info.mime_type))
-        //     .body(movie_data))
-        Ok(res)
+        HttpResponse::Ok()
+            .content_type(movie_file_info.mime_type)
+            .message_body(sized_stream)
     }
 
     /// Handles the request to show the list of all movies.
@@ -305,39 +298,3 @@ where
         }
     }
 }
-
-// struct StreamReadResource<R: ReadResource> {
-//     inner: R,
-//     buf: [u8; 1024],
-// }
-
-// impl<R: ReadResource> Unpin for StreamReadResource<R> {}
-
-// impl<R: ReadResource> StreamReadResource<R> {
-//     pub fn new(inner: R) -> Self {
-//         Self {
-//             inner,
-//             buf: [0u8; 1024],
-//         }
-//     }
-// }
-
-// impl<R: ReadResource> Stream for StreamReadResource<R> {
-//     type Item = std::io::Result<Bytes>;
-
-//     fn poll_next(
-//         mut self: std::pin::Pin<&mut Self>,
-//         cx: &mut std::task::Context<'_>,
-//     ) -> std::task::Poll<Option<Self::Item>> {
-//         let s = self.deref_mut();
-
-//         let reader = &mut s.inner;
-//         let buffer = &mut s.buf;
-
-//         match reader.read(buffer.as_mut()) {
-//             Ok(0) => std::task::Poll::Ready(None),
-//             Ok(n) => std::task::Poll::Ready(Some(Ok(Bytes::copy_from_slice(&buffer[..n])))),
-//             Err(err) => std::task::Poll::Ready(Some(Err(err))),
-//         }
-//     }
-// }
