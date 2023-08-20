@@ -1,5 +1,6 @@
 use std::{marker::PhantomData, sync::RwLock};
 
+use actix_cors::Cors;
 use actix_multipart::Multipart;
 use actix_web::{web, App, HttpServer, Responder, Result};
 
@@ -72,6 +73,11 @@ where
         info!("Listening on {}", self.options.http_address);
 
         match HttpServer::new(move || {
+            let mut cors = Cors::default()
+                .allow_any_header()
+                .allow_any_method()
+                .allow_any_origin();
+
             let api_v1 = web::scope("/api/v1")
                 .route("/movie", web::post().to(Self::handle_post_movie))
                 .route("/movie", web::get().to(Self::handle_get_movie))
@@ -80,7 +86,10 @@ where
                 .route("/movie/file", web::post().to(Self::handle_upload_movie))
                 .route("/movie/file", web::get().to(Self::handle_download_movie));
 
-            App::new().app_data(handler.clone()).service(api_v1)
+            App::new()
+                .wrap(cors)
+                .app_data(handler.clone())
+                .service(api_v1)
         })
         .bind(self.options.http_address.clone())?
         .run()
