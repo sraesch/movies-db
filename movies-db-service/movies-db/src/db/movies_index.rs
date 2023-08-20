@@ -20,8 +20,9 @@ pub struct Movie {
 
 /// A single movie entry with timestamp.
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct MovieWithDate {
+pub struct MovieDetailed {
     pub movie: Movie,
+    pub movie_file_info: Option<MovieFileInfo>,
     pub date: DateTime<Utc>,
 }
 
@@ -55,6 +56,16 @@ impl Default for SortingOrder {
     fn default() -> Self {
         Self::Descending
     }
+}
+
+/// The file info for a stored movie file.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct MovieFileInfo {
+    /// the extension of the movie file in lower case, e.g., "mp4"
+    pub extension: String,
+
+    // the mime type of the movie file, e.g., "video/mp4"
+    pub mime_type: String,
 }
 
 /// A query for searching movies in the database.
@@ -105,7 +116,18 @@ pub trait MoviesIndex: Send + Sync {
     ///
     /// # Arguments
     /// `id` - The ID of the movie to return.
-    fn get_movie(&self, id: &MovieId) -> Result<MovieWithDate, Error>;
+    fn get_movie(&self, id: &MovieId) -> Result<MovieDetailed, Error>;
+
+    /// Updates the movie file info for the given ID.
+    ///
+    /// # Arguments
+    /// `id` - The ID of the movie to update.
+    /// `movie_file_info` - The new movie file info.
+    fn update_movie_file_info(
+        &mut self,
+        id: &MovieId,
+        movie_file_info: MovieFileInfo,
+    ) -> Result<(), Error>;
 
     /// Removes the movie for the given ID.
     ///

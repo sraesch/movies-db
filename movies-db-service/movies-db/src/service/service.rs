@@ -77,7 +77,8 @@ where
                 .route("/movie", web::get().to(Self::handle_get_movie))
                 .route("/movie", web::delete().to(Self::handle_delete_movie))
                 .route("/movie/search", web::get().to(Self::handle_search_movie))
-                .route("/movie/file", web::post().to(Self::handle_upload_movie));
+                .route("/movie/file", web::post().to(Self::handle_upload_movie))
+                .route("/movie/file", web::get().to(Self::handle_download_movie));
 
             App::new().app_data(handler.clone()).service(api_v1)
         })
@@ -129,7 +130,7 @@ where
 
         let mut handler: std::sync::RwLockWriteGuard<'_, ServiceHandler<I, S>> =
             handler.write().unwrap();
-        handler.handle_add_movie(movie)
+        handler.handle_add_movie(movie).await
     }
 
     /// Handles the GET /api/v1/movie endpoint.
@@ -148,7 +149,7 @@ where
 
         let handler = handler.read().unwrap();
 
-        handler.handle_search_movies(query)
+        handler.handle_search_movies(query).await
     }
 
     /// Handles the GET /api/v1/movie endpoint.
@@ -167,7 +168,7 @@ where
 
         let handler = handler.read().unwrap();
 
-        handler.handle_get_movie(id)
+        handler.handle_get_movie(id).await
     }
 
     /// Handles the DELETE /api/v1/movie endpoint.
@@ -186,7 +187,7 @@ where
 
         let mut handler = handler.write().unwrap();
 
-        handler.handle_delete_movie(id)
+        handler.handle_delete_movie(id).await
     }
 
     /// Handles the POST /api/v1/movie/file endpoint.
@@ -208,5 +209,24 @@ where
         let mut handler = handler.write().unwrap();
 
         handler.handle_upload_movie(id, multipart).await
+    }
+
+    /// Handles the GET /api/v1/movie/file endpoint.
+    ///
+    /// # Arguments
+    /// * `handler` - The service handler.
+    /// * `query` - The query parameters.
+    async fn handle_download_movie(
+        handler: web::Data<RwLock<ServiceHandler<I, S>>>,
+        query: web::Query<MovieIdQuery>,
+    ) -> Result<impl Responder> {
+        debug!("Handling GET /api/v1/movie/file");
+        trace!("Request query: {:?}", query);
+
+        let id: MovieId = query.into_inner().id;
+
+        let mut handler = handler.read().unwrap();
+
+        handler.handle_download_movie(id).await
     }
 }

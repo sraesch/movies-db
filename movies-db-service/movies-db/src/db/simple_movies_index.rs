@@ -5,13 +5,13 @@ use log::{debug, error, info};
 use wildmatch::WildMatch;
 
 use crate::{
-    generate_movie_id, Error, Movie, MovieId, MovieSearchQuery, MovieWithDate, MoviesIndex,
-    Options, SortingField, SortingOrder,
+    generate_movie_id, Error, Movie, MovieDetailed, MovieFileInfo, MovieId, MovieSearchQuery,
+    MoviesIndex, Options, SortingField, SortingOrder,
 };
 
 /// A very simple and naive in-memory implementation of the movies index.
 pub struct SimpleMoviesIndex {
-    movies: HashMap<MovieId, MovieWithDate>,
+    movies: HashMap<MovieId, MovieDetailed>,
 }
 
 impl SimpleMoviesIndex {
@@ -50,8 +50,9 @@ impl MoviesIndex for SimpleMoviesIndex {
             id
         );
 
-        let mut movie_with_date = MovieWithDate {
+        let mut movie_with_date = MovieDetailed {
             movie,
+            movie_file_info: None,
             date: chrono::Utc::now(),
         };
         Self::process_tags(&mut movie_with_date.movie.tags);
@@ -61,11 +62,30 @@ impl MoviesIndex for SimpleMoviesIndex {
         Ok(id)
     }
 
-    fn get_movie(&self, id: &MovieId) -> Result<MovieWithDate, Error> {
+    fn get_movie(&self, id: &MovieId) -> Result<MovieDetailed, Error> {
         info!("Getting movie with id {}", id);
 
         match self.movies.get(id) {
             Some(movie) => Ok(movie.clone()),
+            None => {
+                error!("Movie with id {} not found", id);
+                Err(Error::NotFound(format!("Movie with id {} not found", id)))
+            }
+        }
+    }
+
+    fn update_movie_file_info(
+        &mut self,
+        id: &MovieId,
+        movie_file_info: MovieFileInfo,
+    ) -> Result<(), Error> {
+        info!("Updating movie file info for movie with id {}", id);
+
+        match self.movies.get_mut(id) {
+            Some(movie) => {
+                movie.movie_file_info = Some(movie_file_info);
+                Ok(())
+            }
             None => {
                 error!("Movie with id {} not found", id);
                 Err(Error::NotFound(format!("Movie with id {} not found", id)))
