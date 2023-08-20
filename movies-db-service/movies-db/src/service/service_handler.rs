@@ -5,6 +5,7 @@ use crate::{
 
 use actix_multipart::Multipart;
 use actix_web::body::SizedStream;
+use actix_web::http::header;
 use actix_web::web::Bytes;
 use actix_web::HttpResponse;
 use actix_web::{web, Responder, Result};
@@ -113,7 +114,27 @@ where
                 }
             };
 
-            debug!("Uploading file: {:?}", filename);
+            // extract content type information
+            let content_type: String = match field.headers().get(header::CONTENT_TYPE) {
+                Some(content_type) => content_type.to_str().unwrap().to_string(),
+                None => {
+                    error!("Invalid content type");
+                    return Err(actix_web::error::ErrorBadRequest("Invalid content type"));
+                }
+            };
+
+            // check if the content type is a video
+            if !content_type.starts_with("video") {
+                error!("Invalid content type");
+                return Err(actix_web::error::ErrorUnsupportedMediaType(
+                    "Invalid content type",
+                ));
+            }
+
+            info!(
+                "Uploading file {:?} with mime-type {}",
+                filename, content_type
+            );
 
             // extract the extension
             let ext = match filename.extension() {
@@ -135,7 +156,7 @@ where
             // open writer for storing movie data
             let mut writer = match self
                 .storage
-                .write_movie_data(id.clone(), MovieDataType::MovieData { ext })
+                .write_movie_data(id.clone(), MovieDataType::MovieData { ext: ext.clone() })
                 .await
             {
                 Ok(writer) => writer,
@@ -160,6 +181,21 @@ where
                         error!("Error writing chunk: {}", err);
                         return Err(actix_web::error::ErrorInternalServerError(err));
                     }
+                }
+            }
+
+            // update the movie file info
+            match self.index.update_movie_file_info(
+                &id,
+                crate::MovieFileInfo {
+                    extension: ext.clone(),
+                    mime_type: content_type,
+                },
+            ) {
+                Ok(()) => (),
+                Err(err) => {
+                    error!("Error updating movie file info: {}", err);
+                    return Err(actix_web::error::ErrorInternalServerError(err));
                 }
             }
         }
