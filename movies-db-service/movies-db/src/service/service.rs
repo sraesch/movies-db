@@ -1,5 +1,6 @@
 use std::{marker::PhantomData, sync::RwLock};
 
+use actix_multipart::Multipart;
 use actix_web::{web, App, HttpServer, Responder, Result};
 
 use log::{debug, error, info, trace};
@@ -75,7 +76,8 @@ where
                 .route("/movie", web::post().to(Self::handle_post_movie))
                 .route("/movie", web::get().to(Self::handle_get_movie))
                 .route("/movie", web::delete().to(Self::handle_delete_movie))
-                .route("/movie/search", web::get().to(Self::handle_search_movie));
+                .route("/movie/search", web::get().to(Self::handle_search_movie))
+                .route("/movie/file", web::post().to(Self::handle_upload_movie));
 
             App::new().app_data(handler.clone()).service(api_v1)
         })
@@ -185,5 +187,26 @@ where
         let mut handler = handler.write().unwrap();
 
         handler.handle_delete_movie(id)
+    }
+
+    /// Handles the POST /api/v1/movie/file endpoint.
+    ///
+    /// # Arguments
+    /// * `handler` - The service handler.
+    /// * `query` - The query parameters.
+    /// * `multipart` - The multipart data.
+    async fn handle_upload_movie(
+        handler: web::Data<RwLock<ServiceHandler<I, S>>>,
+        query: web::Query<MovieIdQuery>,
+        multipart: Multipart,
+    ) -> Result<impl Responder> {
+        debug!("Handling POST /api/v1/movie/file");
+        trace!("Request query: {:?}", query);
+
+        let id: MovieId = query.into_inner().id;
+
+        let mut handler = handler.write().unwrap();
+
+        handler.handle_upload_movie(id, multipart).await
     }
 }

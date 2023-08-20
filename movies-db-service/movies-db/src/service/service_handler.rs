@@ -1,8 +1,13 @@
-use crate::{Error, Movie, MovieId, MovieSearchQuery, MovieStorage, MoviesIndex, Options};
+use crate::{
+    Error, Movie, MovieDataType, MovieId, MovieSearchQuery, MovieStorage, MoviesIndex, Options,
+};
 
+use actix_multipart::Multipart;
 use actix_web::{web, Responder, Result};
-use log::error;
+use futures::{StreamExt, TryStreamExt};
+use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
+use std::{io::Write, path::PathBuf};
 
 pub struct ServiceHandler<I, S>
 where
@@ -75,6 +80,85 @@ where
             },
             Err(err) => Self::handle_error(err),
         }
+    }
+
+    /// Handles the request to upload a movie.
+    ///
+    /// # Arguments
+    /// * `id` - The id of the movie to upload.
+    /// * `multipart` - The multipart data of the movie.
+    pub async fn handle_upload_movie(
+        &mut self,
+        id: MovieId,
+        mut multipart: Multipart,
+    ) -> Result<impl Responder> {
+        info!("Uploading movie {} ...", id);
+
+        // iterate over multipart stream
+        while let Ok(Some(mut field)) = multipart.try_next().await {
+            // extract the filename
+            let content_type = field.content_disposition();
+            let filename: PathBuf = match content_type.get_filename() {
+                Some(filename) => PathBuf::from(filename),
+                None => {
+                    error!("Invalid filename");
+                    return Err(actix_web::error::ErrorBadRequest("Invalid filename"));
+                }
+            };
+
+            debug!("Uploading file: {:?}", filename);
+
+            // extract the extension
+            let ext = match filename.extension() {
+                Some(ext) => match ext.to_str() {
+                    Some(ext) => ext.to_string(),
+                    None => {
+                        error!("Invalid extension");
+                        return Err(actix_web::error::ErrorBadRequest("Invalid extension"));
+                    }
+                },
+                None => {
+                    error!("Invalid extension");
+                    return Err(actix_web::error::ErrorBadRequest("Invalid extension"));
+                }
+            };
+
+            debug!("Uploading file with extension: {:?}", ext);
+
+            // open writer for storing movie data
+            let mut writer = match self
+                .storage
+                .write_movie_data(id.clone(), MovieDataType::MovieData { ext })
+            {
+                Ok(writer) => writer,
+                Err(err) => {
+                    return Self::handle_error(err);
+                }
+            };
+
+            // // Field in turn is stream of *Bytes* object
+            while let Some(chunk) = field.next().await {
+                let data = match chunk {
+                    Ok(data) => data,
+                    Err(err) => {
+                        error!("Error reading chunk: {}", err);
+                        return Err(actix_web::error::ErrorInternalServerError(err));
+                    }
+                };
+
+                match writer.write_all(&data) {
+                    Ok(_) => (),
+                    Err(err) => {
+                        error!("Error writing chunk: {}", err);
+                        return Err(actix_web::error::ErrorInternalServerError(err));
+                    }
+                }
+            }
+        }
+
+        info!("Uploading movie {} ... DONE", id);
+
+        Ok(actix_web::HttpResponse::Ok())
     }
 
     /// Handles the request to show the list of all movies.
