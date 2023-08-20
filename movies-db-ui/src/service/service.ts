@@ -1,4 +1,4 @@
-import { MovieId, MovieSubmit } from "./types";
+import { MovieDetailed, MovieId, MovieSubmit } from "./types";
 
 export type ProgressUpdate = (progress: number, done: boolean) => void;
 
@@ -23,6 +23,32 @@ export class Service {
         await this.submitMovieFile(id, file, progressUpdate);
 
         return id;
+    }
+
+    /**
+     * Returns detailed information for the given movie id.
+     * 
+     * @param id - The id of the movie to get.
+     *
+     * @returns detailed information for the given movie id.
+     */
+    public async getMovie(id: MovieId): Promise<MovieDetailed> {
+        const response = await fetch(`${this.endpoint}/movie?id=${id}`);
+
+        if (!response.ok) {
+            throw new Error("Failed to get movie");
+        }
+
+        const movie = await response.json() as MovieDetailed;
+
+        return movie;
+    }
+
+    /**
+     * @returns the resource url for the movie file with the given id.
+     */
+    public getMovieUrl(id: MovieId): string {
+        return `${this.endpoint}/movie/file?id=${id}`;
     }
 
     /**
