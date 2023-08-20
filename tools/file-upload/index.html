@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+</head>
+
+<body>
+    <div style="display: flex; flex-direction: column;">
+        <input type="url" id="url" value="http://localhost:3030/api/v1/movie/file">
+        <input type="text" id="uuid" placeholder="Enter Movie Id">
+        <input type="file" id="file">
+    </div>
+</body>
+<script>
+    const urlComponent = document.querySelector("#url");
+    const uuidComponent = document.querySelector("#uuid");
+    const fileComponent = document.querySelector("#file");
+
+    fileComponent.addEventListener("change", (event) => {
+        event.preventDefault();
+
+        const urlString = urlComponent.value;
+        const uuidString = uuidComponent.value;
+
+        const fullUrl = `${urlString}?id=${uuidString}`;
+        console.log(fullUrl);
+
+        // When the control has changed, there are new files
+        const files = fileComponent.files;
+        for (var i = 0; i < files.length; i++) {
+            console.log("Filename: " + files[i].name);
+            console.log("Type: " + files[i].type);
+            console.log("Size: " + files[i].size + " bytes");
+
+            let formData = new FormData();
+            formData.append("video", files[i]);
+            fetch(fullUrl, { method: "POST", body: formData });
+        }
+    }, false);
+</script>
+
+</html>

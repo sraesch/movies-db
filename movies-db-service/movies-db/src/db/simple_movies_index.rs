@@ -1,17 +1,17 @@
-use std::{collections::HashMap, ops::Range};
+use std::collections::HashMap;
 
 use chrono::DateTime;
 use log::{debug, error, info};
 use wildmatch::WildMatch;
 
 use crate::{
-    generate_movie_id, Error, Movie, MovieId, MovieSearchQuery, MovieSorting, MovieWithDate,
+    generate_movie_id, Error, Movie, MovieDetailed, MovieFileInfo, MovieId, MovieSearchQuery,
     MoviesIndex, Options, SortingField, SortingOrder,
 };
 
 /// A very simple and naive in-memory implementation of the movies index.
 pub struct SimpleMoviesIndex {
-    movies: HashMap<MovieId, MovieWithDate>,
+    movies: HashMap<MovieId, MovieDetailed>,
 }
 
 impl SimpleMoviesIndex {
@@ -50,8 +50,9 @@ impl MoviesIndex for SimpleMoviesIndex {
             id
         );
 
-        let mut movie_with_date = MovieWithDate {
+        let mut movie_with_date = MovieDetailed {
             movie,
+            movie_file_info: None,
             date: chrono::Utc::now(),
         };
         Self::process_tags(&mut movie_with_date.movie.tags);
@@ -61,11 +62,30 @@ impl MoviesIndex for SimpleMoviesIndex {
         Ok(id)
     }
 
-    fn get_movie(&self, id: &MovieId) -> Result<MovieWithDate, Error> {
+    fn get_movie(&self, id: &MovieId) -> Result<MovieDetailed, Error> {
         info!("Getting movie with id {}", id);
 
         match self.movies.get(id) {
             Some(movie) => Ok(movie.clone()),
+            None => {
+                error!("Movie with id {} not found", id);
+                Err(Error::NotFound(format!("Movie with id {} not found", id)))
+            }
+        }
+    }
+
+    fn update_movie_file_info(
+        &mut self,
+        id: &MovieId,
+        movie_file_info: MovieFileInfo,
+    ) -> Result<(), Error> {
+        info!("Updating movie file info for movie with id {}", id);
+
+        match self.movies.get_mut(id) {
+            Some(movie) => {
+                movie.movie_file_info = Some(movie_file_info);
+                Ok(())
+            }
             None => {
                 error!("Movie with id {} not found", id);
                 Err(Error::NotFound(format!("Movie with id {} not found", id)))
@@ -141,15 +161,17 @@ impl MoviesIndex for SimpleMoviesIndex {
         Self::process_tags(&mut query.tags);
 
         // get sorted movie ids
-        let in_movie_ids = self.get_movies_sorted(query.sorting);
+        let in_movie_ids = self.get_movies_sorted(query.sorting_field, query.sorting_order);
 
         // create wildcard query if provided
         let title_query: Option<WildMatch> = query.title.map(|s| WildMatch::new(&s));
 
-        let range = query.range.unwrap_or(Range {
-            start: 0,
-            end: usize::MAX,
-        });
+        let start_index = query.start_index.unwrap_or(0);
+        let end_index = match query.num_results {
+            Some(num_results) => start_index + num_results,
+            None => usize::MAX,
+        };
+
         let mut num_hits = 0usize;
         let mut movie_ids = Vec::new();
         for id in in_movie_ids.iter() {
@@ -183,9 +205,9 @@ impl MoviesIndex for SimpleMoviesIndex {
             }
 
             // add movie id if index is within range
-            if num_hits >= range.start && range.end > num_hits {
+            if num_hits >= start_index && end_index > num_hits {
                 movie_ids.push(id.clone());
-            } else if num_hits >= range.end {
+            } else if num_hits >= end_index {
                 break;
             }
 
@@ -200,11 +222,12 @@ impl SimpleMoviesIndex {
     /// Returns a list of all movies sorted according to the given sorting parameter.
     ///
     /// # Arguments
-    /// * `sorting` - The sorting parameter.
-    fn get_movies_sorted(&self, sorting: MovieSorting) -> Vec<MovieId> {
-        match sorting.field {
-            SortingField::Title => self.get_movies_sorted_by_title(sorting.order),
-            SortingField::Date => self.get_movies_sorted_by_date(sorting.order),
+    /// * `field` - The field by which the movies should be sorted.
+    /// * `order` - The order in which the movies should be sorted.
+    fn get_movies_sorted(&self, field: SortingField, order: SortingOrder) -> Vec<MovieId> {
+        match field {
+            SortingField::Title => self.get_movies_sorted_by_title(order),
+            SortingField::Date => self.get_movies_sorted_by_date(order),
         }
     }
 
@@ -324,10 +347,8 @@ mod test {
 
         // test query 1A: Search all movies (ascending order by title)
         let mut query: MovieSearchQuery = Default::default();
-        query.sorting = MovieSorting {
-            field: SortingField::Title,
-            order: SortingOrder::Ascending,
-        };
+        query.sorting_field = SortingField::Title;
+        query.sorting_order = SortingOrder::Ascending;
         let movie_title: Vec<String> = index
             .search_movies(query)
             .unwrap()
@@ -346,10 +367,8 @@ mod test {
 
         // test query 1B: Search all movies (descending order by title)
         let mut query: MovieSearchQuery = Default::default();
-        query.sorting = MovieSorting {
-            field: SortingField::Title,
-            order: SortingOrder::Descending,
-        };
+        query.sorting_field = SortingField::Title;
+        query.sorting_order = SortingOrder::Descending;
         let movie_title: Vec<String> = index
             .search_movies(query)
             .unwrap()
@@ -369,10 +388,8 @@ mod test {
         // // test query 2: Search only science fiction movies
         let mut query: MovieSearchQuery = Default::default();
         query.tags = vec!["Sci-Fi".to_owned()];
-        query.sorting = MovieSorting {
-            field: SortingField::Title,
-            order: SortingOrder::Ascending,
-        };
+        query.sorting_field = SortingField::Title;
+        query.sorting_order = SortingOrder::Ascending;
         let search_result = index.search_movies(query).unwrap();
         let title_list = search_result
             .iter()
@@ -388,17 +405,21 @@ mod test {
 
         // test query 3: Search 'Das Boot'
         let query = MovieSearchQuery {
-            sorting: Default::default(),
+            sorting_field: Default::default(),
+            sorting_order: Default::default(),
             title: Some("Boot".to_owned()),
             tags: vec![],
-            range: None,
+            start_index: None,
+            num_results: None,
         };
         assert_eq!(index.search_movies(query).unwrap().len(), 0);
         let query = MovieSearchQuery {
-            sorting: Default::default(),
+            sorting_field: Default::default(),
+            sorting_order: Default::default(),
             title: Some("*Boot".to_owned()),
             tags: vec![],
-            range: None,
+            start_index: None,
+            num_results: None,
         };
         assert_eq!(
             index
@@ -412,13 +433,12 @@ mod test {
 
         // test query 4: Limited ranges
         let query = MovieSearchQuery {
-            sorting: MovieSorting {
-                field: SortingField::Title,
-                order: SortingOrder::Ascending,
-            },
+            sorting_field: SortingField::Title,
+            sorting_order: SortingOrder::Ascending,
             title: None,
             tags: vec![],
-            range: Some(Range { start: 0, end: 1 }),
+            start_index: Some(0),
+            num_results: Some(1),
         };
         assert_eq!(
             index
@@ -430,13 +450,12 @@ mod test {
             ["Das Boot"]
         );
         let query = MovieSearchQuery {
-            sorting: MovieSorting {
-                field: SortingField::Title,
-                order: SortingOrder::Ascending,
-            },
+            sorting_field: SortingField::Title,
+            sorting_order: SortingOrder::Ascending,
             title: None,
             tags: vec![],
-            range: Some(Range { start: 1, end: 3 }),
+            start_index: Some(1),
+            num_results: Some(2),
         };
         assert_eq!(
             index
