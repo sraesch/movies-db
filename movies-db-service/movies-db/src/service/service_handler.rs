@@ -54,7 +54,7 @@ where
     pub async fn handle_add_movie(&mut self, movie: Movie) -> Result<impl Responder> {
         match self.index.add_movie(movie) {
             Ok(movie_id) => match self.storage.allocate_movie_data(movie_id.clone()).await {
-                Ok(()) => Ok(web::Json(movie_id)),
+                Ok(()) => Ok(movie_id),
                 Err(err) => Self::handle_error(err),
             },
             Err(err) => Self::handle_error(err),
