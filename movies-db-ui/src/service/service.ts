@@ -1,4 +1,4 @@
-import { MovieDetailed, MovieId, MovieSubmit } from "./types";
+import { MovieDetailed, MovieId, MovieSearchQuery, MovieSearchResult, MovieSubmit } from "./types";
 
 export type ProgressUpdate = (progress: number, done: boolean) => void;
 
@@ -42,6 +42,38 @@ export class Service {
         const movie = await response.json() as MovieDetailed;
 
         return movie;
+    }
+
+    /**
+     * Returns a list of movies matching the given query in the given order.
+     * 
+     * @param query - The query to use for searching movies.
+     * 
+     * @returns a list of movie ids with title matching the given query in the given order.
+     **/
+    public async searchMovies(query: MovieSearchQuery): Promise<MovieSearchResult> {
+        const queryString = `sorting_order=${query.sorting_order}&sorting_field=${query.sorting_field}`;
+        if (query.title) {
+            queryString.concat(`&title=${query.title}`);
+        }
+        if (query.start_index) {
+            queryString.concat(`&start_index=${query.start_index}`);
+        }
+        if (query.num_results) {
+            queryString.concat(`&num_results=${query.num_results}`);
+        }
+
+        const response = await fetch(`${this.endpoint}/movie/search?${queryString}`, {
+            method: "GET",
+        });
+
+        if (!response.ok) {
+            throw new Error("Failed to search movies");
+        }
+
+        const movies = await response.json() as MovieSearchResult;
+
+        return movies;
     }
 
     /**
