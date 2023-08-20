@@ -10,7 +10,7 @@ function App() {
 
   const handleAddVideo = async (info: MovieSubmit, file: File): Promise<void> => {
     console.log(`Submit Video: ${JSON.stringify(info)}`);
-    await service.submitMovie(info);
+    await service.submitMovie(info, file);
   };
 
   return (
