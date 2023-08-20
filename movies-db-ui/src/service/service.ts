@@ -45,6 +45,21 @@ export class Service {
     }
 
     /**
+     * Deletes the movie with the given id.
+     * 
+     * @param id - The id of the movie to delete.
+     **/
+    public async removeMovie(id: MovieId): Promise<void> {
+        const response = await fetch(`${this.endpoint}/movie?id=${id}`, {
+            method: "DELETE",
+        });
+
+        if (!response.ok) {
+            throw new Error("Failed to remove movie");
+        }
+    }
+
+    /**
      * Returns a list of movies matching the given query in the given order.
      * 
      * @param query - The query to use for searching movies.

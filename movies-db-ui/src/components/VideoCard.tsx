@@ -6,14 +6,17 @@ import CardContent from '@mui/material/CardContent';
 import CardActions from '@mui/material/CardActions';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
+import ClearIcon from '@mui/icons-material/Clear';
 import { MovieDetailed, MovieId } from '../service/types';
 import { Chip } from '@mui/material';
-import NoVideo from '../img/no_video.png';
 import { service } from '../service/service';
+
+import NoVideo from '../img/no_video.png';
+
 
 export interface VideoCardProps {
     movieId: MovieId;
+    onDelete?: () => void;
 }
 
 export default function VideoCard(props: VideoCardProps): JSX.Element {
@@ -35,6 +38,12 @@ export default function VideoCard(props: VideoCardProps): JSX.Element {
         return <div></div>
     }
 
+    const handleOnDelete = () => {
+        if (props.onDelete) {
+            props.onDelete();
+        }
+    };
+
     const movieDate = new Date(movieInfo.date);
 
     const { movie } = movieInfo;
@@ -44,8 +53,8 @@ export default function VideoCard(props: VideoCardProps): JSX.Element {
         <Card sx={{ maxWidth: 345 }}>
             <CardHeader
                 action={
-                    <IconButton aria-label="settings">
-                        <MoreVertIcon />
+                    <IconButton aria-label="settings" onClick={handleOnDelete}>
+                        <ClearIcon />
                     </IconButton>
                 }
                 title={movie.title}
