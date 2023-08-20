@@ -1,5 +1,7 @@
 import { MovieId, MovieSubmit } from "./types";
 
+export type ProgressUpdate = (progress: number, done: boolean) => void;
+
 export class Service {
     private endpoint: string;
 
@@ -12,12 +14,13 @@ export class Service {
      * 
      * @param movie - The movie to submit.
      * @param file - The file to submit.
+     * @param progressUpdate - An optional callback to receive progress updates.
      *
      * @returns the id of the submitted movie.
      */
-    public async submitMovie(movie: MovieSubmit, file: File): Promise<MovieId> {
+    public async submitMovie(movie: MovieSubmit, file: File, progressUpdate?: ProgressUpdate): Promise<MovieId> {
         const id = await this.submitMovieInfo(movie);
-        await this.submitMovieFile(id, file);
+        await this.submitMovieFile(id, file, progressUpdate);
 
         return id;
     }
@@ -27,15 +30,46 @@ export class Service {
      * 
      * @param id - The id of the movie to submit.
      * @param file - The file to submit.
+     * @param progressUpdate - An optional callback to receive progress updates.
      */
-    private async submitMovieFile(id: MovieId, file: File): Promise<void> {
+    private submitMovieFile(id: MovieId, file: File, progressUpdate?: ProgressUpdate): Promise<void> {
+        const handleProgressUpdate = (progress: number, done: boolean) => {
+            if (progressUpdate) {
+                progressUpdate(progress, done);
+            }
+        }
+
+        handleProgressUpdate(0, false);
         const formData = new FormData();
         formData.append("video", file);
-        const response = await fetch(`${this.endpoint}/movie/file?id=${id}`, { method: "POST", body: formData });
 
-        if (!response.ok) {
-            throw new Error("Failed to submit movie");
-        }
+        const request = new XMLHttpRequest();
+        request.open('POST', `${this.endpoint}/movie/file?id=${id}`);
+
+        const promise = new Promise<void>((resolve, reject) => {
+            // upload progress event
+            request.upload.addEventListener('progress', (e) => {
+                // upload progress as percentage
+                let percent_completed = (e.loaded / e.total) * 100;
+                handleProgressUpdate(percent_completed, false);
+            });
+
+            // request finished event
+            request.addEventListener('load', (e) => {
+                handleProgressUpdate(100, true);
+                const isOk = request.status === 200 || request.status === 201 || request.status === 202;
+                if (isOk) {
+                    resolve();
+                } else {
+                    reject(request.response);
+                }
+            });
+        });
+
+        // send POST request to server
+        request.send(formData);
+
+        return promise;
     }
 
     /**
