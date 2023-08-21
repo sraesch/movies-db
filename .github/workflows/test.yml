@@ -41,6 +41,7 @@ jobs:
       - uses: "actions-rs/cargo@v1"
         with:
           command: "test"
+          args: "--manifest-path movies-db-service/Cargo.toml"
 
   fmt:
     name: "Cargo format"
@@ -60,7 +61,7 @@ jobs:
       - uses: "actions-rs/cargo@v1"
         with:
           command: "fmt"
-          args: "--all -- --check"
+          args: "--all --manifest-path movies-db-service/Cargo.toml -- --check"
 
   clippy:
     name: "Cargo clippy"
@@ -80,4 +81,4 @@ jobs:
       - uses: "actions-rs/cargo@v1"
         with:
           command: "clippy"
-          args: "-- -D warnings"
+          args: "--manifest-path movies-db-service/Cargo.toml -- -D warnings"
