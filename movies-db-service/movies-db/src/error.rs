@@ -24,3 +24,9 @@ impl From<io::Error> for Error {
         Error::IO(format!("{}", error))
     }
 }
+
+impl From<rusqlite::Error> for Error {
+    fn from(error: rusqlite::Error) -> Self {
+        Error::Internal(format!("SQLite Error: {}", error))
+    }
+}
