@@ -52,7 +52,7 @@ where
     /// # Arguments
     /// * `movie` - The movie to add.
     pub async fn handle_add_movie(&mut self, movie: Movie) -> Result<impl Responder> {
-        match self.index.add_movie(movie) {
+        match self.index.add_movie(movie).await {
             Ok(movie_id) => match self.storage.allocate_movie_data(movie_id.clone()).await {
                 Ok(()) => Ok(movie_id),
                 Err(err) => Self::handle_error(err),
@@ -66,7 +66,7 @@ where
     /// # Arguments
     /// * `movie` - The movie to get.
     pub async fn handle_get_movie(&self, id: MovieId) -> Result<impl Responder> {
-        match self.index.get_movie(&id) {
+        match self.index.get_movie(&id).await {
             Ok(movie) => Ok(web::Json(movie)),
             Err(err) => Self::handle_error(err),
         }
@@ -77,7 +77,7 @@ where
     /// # Arguments
     /// * `movie` - The movie to get.
     pub async fn handle_delete_movie(&mut self, id: MovieId) -> Result<impl Responder> {
-        match self.index.remove_movie(&id) {
+        match self.index.remove_movie(&id).await {
             Ok(()) => match self.storage.remove_movie_data(id).await {
                 Ok(_) => Ok(actix_web::HttpResponse::Ok()),
                 Err(err) => {
@@ -184,13 +184,17 @@ where
             }
 
             // update the movie file info
-            match self.index.update_movie_file_info(
-                &id,
-                crate::MovieFileInfo {
-                    extension: ext.clone(),
-                    mime_type: content_type,
-                },
-            ) {
+            match self
+                .index
+                .update_movie_file_info(
+                    &id,
+                    crate::MovieFileInfo {
+                        extension: ext.clone(),
+                        mime_type: content_type,
+                    },
+                )
+                .await
+            {
                 Ok(()) => (),
                 Err(err) => {
                     error!("Error updating movie file info: {}", err);
@@ -212,7 +216,7 @@ where
         info!("Downloading movie {} ...", id);
 
         // get the movie file info, needed for requesting the movie data
-        let movie_file_info = match self.index.get_movie(&id) {
+        let movie_file_info = match self.index.get_movie(&id).await {
             Ok(movie) => match movie.movie_file_info {
                 Some(movie_file_info) => movie_file_info,
                 None => {
@@ -259,24 +263,22 @@ where
 
     /// Handles the request to show the list of all movies.
     pub async fn handle_search_movies(&self, query: MovieSearchQuery) -> Result<impl Responder> {
-        let movies_ids = match self.index.search_movies(query) {
-            Ok(movies_ids) => movies_ids,
+        let movie_ids = match self.index.search_movies(query).await {
+            Ok(movie_ids) => movie_ids,
             Err(err) => {
                 error!("Error searching: {}", err);
                 return Self::handle_error(err);
             }
         };
 
-        let movies: Vec<MovieListEntry> = movies_ids
-            .iter()
-            .map(|id| {
-                let movie = self.index.get_movie(id).unwrap();
-                MovieListEntry {
-                    id: id.clone(),
-                    title: movie.movie.title,
-                }
-            })
-            .collect();
+        let mut movies: Vec<MovieListEntry> = Vec::with_capacity(movie_ids.len());
+        for movie_id in movie_ids.iter() {
+            let movie = self.index.get_movie(movie_id).await.unwrap();
+            movies.push(MovieListEntry {
+                id: movie_id.clone(),
+                title: movie.movie.title,
+            });
+        }
 
         Ok(web::Json(movies))
     }
