@@ -91,7 +91,7 @@ impl SqliteMoviesIndex {
 
                 query_string.push_str(" WHERE m.title LIKE '");
                 query_string.push_str(&title);
-                query_string.push_str("'");
+                query_string.push('\'');
             }
             None => {}
         }
@@ -123,7 +123,7 @@ impl SqliteMoviesIndex {
 
                 query_string.push_str(" AND m.title LIKE '");
                 query_string.push_str(&title);
-                query_string.push_str("'");
+                query_string.push('\'');
             }
             None => {}
         }
@@ -158,19 +158,13 @@ impl SqliteMoviesIndex {
         order_and_limit.push_str(&format!(" ORDER BY {} {} ", field, order));
 
         // limit
-        match query.num_results {
-            Some(num_results) => {
-                order_and_limit.push_str(&format!(" LIMIT {} ", num_results));
-            }
-            None => {}
+        if let Some(limit) = query.num_results {
+            order_and_limit.push_str(&format!(" LIMIT {} ", limit));
         }
 
         // offset
-        match query.start_index {
-            Some(offset) => {
-                order_and_limit.push_str(&format!(" OFFSET {} ", offset));
-            }
-            None => {}
+        if let Some(offset) = query.start_index {
+            order_and_limit.push_str(&format!(" OFFSET {} ", offset));
         }
 
         order_and_limit
@@ -183,12 +177,9 @@ impl MoviesIndex for SqliteMoviesIndex {
     where
         Self: Sized,
     {
-        match create_dir_all(&options.root_dir) {
-            Err(err) => {
-                error!("Failed to create the root directory: {}", err);
-                return Err(err.into());
-            }
-            Ok(()) => {}
+        if let Err(err) = create_dir_all(&options.root_dir) {
+            error!("Failed to create the root directory: {}", err);
+            return Err(err.into());
         }
 
         let mut sqlite_path = options.root_dir.clone();
@@ -201,18 +192,15 @@ impl MoviesIndex for SqliteMoviesIndex {
         match Connection::open(sqlite_path) {
             Err(err) => {
                 error!("Failed to open the SQLite database: {}", err);
-                return Err(Error::IO(format!("Failed to open SQLite DB{}", err)));
+                Err(Error::IO(format!("Failed to open SQLite DB{}", err)))
             }
             Ok(connection) => {
-                match Self::create_tables(&connection) {
-                    Err(err) => {
-                        error!("Failed to create the tables: {}", err);
-                        return Err(Error::Internal(format!(
-                            "Failed to create the tables: {}",
-                            err
-                        )));
-                    }
-                    Ok(()) => {}
+                if let Err(err) = Self::create_tables(&connection) {
+                    error!("Failed to create the tables: {}", err);
+                    return Err(Error::Internal(format!(
+                        "Failed to create the tables: {}",
+                        err
+                    )));
                 }
 
                 let connection = Mutex::new(connection);
@@ -229,9 +217,9 @@ impl MoviesIndex for SqliteMoviesIndex {
         // check if movie has title
         if movie.title.is_empty() {
             error!("Movie has no title");
-            return Err(Error::InvalidArgument(format!(
-                "Movie title must not be empty"
-            )));
+            return Err(Error::InvalidArgument(
+                "Movie title must not be empty".to_string(),
+            ));
         }
 
         let date = chrono::Utc::now().to_rfc3339();

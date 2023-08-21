@@ -123,7 +123,7 @@ impl FileStorage {
     fn get_movie_data_path(&self, id: &MovieId) -> PathBuf {
         let mut file_path = self.root_dir.clone();
 
-        file_path.push(format!("{}", id));
+        file_path.push(id);
 
         file_path
     }
