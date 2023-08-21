@@ -43,11 +43,11 @@ pub struct Options {
     pub root_dir: PathBuf,
 }
 
-impl Into<ServiceOptions> for Options {
-    fn into(self) -> ServiceOptions {
+impl From<Options> for ServiceOptions {
+    fn from(options: Options) -> Self {
         ServiceOptions {
-            root_dir: self.root_dir,
-            http_address: self.address.parse().unwrap(),
+            root_dir: options.root_dir,
+            http_address: options.address.parse().unwrap(),
         }
     }
 }

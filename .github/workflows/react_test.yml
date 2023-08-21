@@ -1,0 +1,35 @@
+name: "ReactTest"
+
+on:
+    pull_request:
+
+env:
+    working-directory: "./movies-db-ui"
+
+jobs:
+    build:
+        name: "Build React"
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: "Check out the repo"
+              uses: actions/checkout@v3
+
+            - name: Install Node.js
+              uses: actions/setup-node@v1
+              with:
+                  node-version: "12.x"
+
+            - name: Install dependencies
+              run: npm install
+              working-directory: ${{ env.working-directory }}
+
+            # Deactivate tests for now as there seems to be an issue with jest and css-tools
+            # - name: Run the tests
+            #   run: npm test
+            #   working-directory: ${{ env.working-directory }}
+
+            - name: Build React App
+              run: npm run build
+              working-directory: ${{ env.working-directory }}
+

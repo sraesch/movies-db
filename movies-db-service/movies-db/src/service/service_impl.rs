@@ -1,10 +1,11 @@
-use std::{marker::PhantomData, sync::RwLock};
+use std::marker::PhantomData;
 
 use actix_cors::Cors;
 use actix_multipart::Multipart;
 use actix_web::{web, App, HttpServer, Responder, Result};
 
 use log::{debug, error, info, trace};
+use tokio::sync::RwLock;
 
 use crate::{Error, Movie, MovieId, MovieSearchQuery, MovieStorage, MoviesIndex, Options};
 
@@ -91,7 +92,7 @@ where
                 .app_data(handler.clone())
                 .service(api_v1)
         })
-        .bind(self.options.http_address.clone())?
+        .bind(self.options.http_address)?
         .run()
         .await
         {
@@ -137,8 +138,7 @@ where
 
         let movie: Movie = movie.into_inner();
 
-        let mut handler: std::sync::RwLockWriteGuard<'_, ServiceHandler<I, S>> =
-            handler.write().unwrap();
+        let mut handler = handler.write().await;
         handler.handle_add_movie(movie).await
     }
 
@@ -156,7 +156,7 @@ where
 
         let query: MovieSearchQuery = query.into_inner();
 
-        let handler = handler.read().unwrap();
+        let handler = handler.read().await;
 
         handler.handle_search_movies(query).await
     }
@@ -175,7 +175,7 @@ where
 
         let id: MovieId = query.into_inner().id;
 
-        let handler = handler.read().unwrap();
+        let handler = handler.read().await;
 
         handler.handle_get_movie(id).await
     }
@@ -194,7 +194,7 @@ where
 
         let id: MovieId = query.into_inner().id;
 
-        let mut handler = handler.write().unwrap();
+        let mut handler = handler.write().await;
 
         handler.handle_delete_movie(id).await
     }
@@ -215,7 +215,7 @@ where
 
         let id: MovieId = query.into_inner().id;
 
-        let mut handler = handler.write().unwrap();
+        let mut handler = handler.write().await;
 
         handler.handle_upload_movie(id, multipart).await
     }
@@ -234,7 +234,7 @@ where
 
         let id: MovieId = query.into_inner().id;
 
-        let handler = handler.read().unwrap();
+        let handler = handler.read().await;
 
         handler.handle_download_movie(id).await
     }

@@ -21,7 +21,7 @@ impl SimpleMoviesIndex {
     ///
     /// # Arguments
     /// `tags` - The tags to process.
-    fn process_tags(tags: &mut Vec<String>) {
+    fn process_tags(tags: &mut [String]) {
         tags.iter_mut().for_each(|tag| *tag = tag.to_lowercase());
         tags.sort();
     }
@@ -42,9 +42,9 @@ impl MoviesIndex for SimpleMoviesIndex {
         // check if movie has title
         if movie.title.is_empty() {
             error!("Movie has no title");
-            return Err(Error::InvalidArgument(format!(
-                "Movie title must not be empty"
-            )));
+            return Err(Error::InvalidArgument(
+                "Movie title must not be empty".to_string(),
+            ));
         }
 
         assert!(
@@ -138,13 +138,10 @@ impl MoviesIndex for SimpleMoviesIndex {
             let movie = &movie_with_date.movie;
 
             // if a title query is available and the movie title does not match, skip
-            match title_query {
-                Some(ref title_query) => {
-                    if !title_query.matches(&movie.title) {
-                        continue;
-                    }
+            if let Some(ref title_query) = title_query {
+                if !title_query.matches(&movie.title) {
+                    continue;
                 }
-                None => {}
             }
 
             // check that all tags match
@@ -194,7 +191,7 @@ impl SimpleMoviesIndex {
             .map(|(id, movie)| (id.clone(), movie.movie.title.clone()))
             .collect();
 
-        movies.sort_unstable_by(|(_, lhs), (_, rhs)| lhs.cmp(&rhs));
+        movies.sort_unstable_by(|(_, lhs), (_, rhs)| lhs.cmp(rhs));
 
         if order == SortingOrder::Ascending {
             movies.iter().map(|(id, _)| id.clone()).collect()
@@ -207,10 +204,10 @@ impl SimpleMoviesIndex {
         let mut movies: Vec<(MovieId, DateTime<_>)> = self
             .movies
             .iter()
-            .map(|(id, movie)| (id.clone(), movie.date.clone()))
+            .map(|(id, movie)| (id.clone(), movie.date))
             .collect();
 
-        movies.sort_unstable_by(|(_, lhs), (_, rhs)| lhs.cmp(&rhs));
+        movies.sort_unstable_by(|(_, lhs), (_, rhs)| lhs.cmp(rhs));
 
         if order == SortingOrder::Ascending {
             movies.iter().map(|(id, _)| id.clone()).collect()
