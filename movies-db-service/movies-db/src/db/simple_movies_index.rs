@@ -463,4 +463,57 @@ mod test {
             ["Doctor Who", "E.T. the Extra-Terrestrial"]
         );
     }
+
+    #[tokio::test]
+    async fn test_add_movie_file_info() {
+        let mut index = SimpleMoviesIndex::new(&Options::default()).unwrap();
+        let movies = create_test_movies();
+
+        let mut movie_ids: Vec<MovieId> = Vec::with_capacity(movies.len());
+        for movie in movies.iter() {
+            let ret = index.add_movie(movie.clone()).await;
+            assert!(ret.is_ok());
+
+            movie_ids.push(ret.unwrap());
+        }
+
+        // make sure non of the added movies has a file info
+        for movie_id in movie_ids.iter() {
+            let movie = index.get_movie(&movie_id).await.unwrap();
+            assert!(movie.movie_file_info.is_none());
+        }
+
+        // add movie file info only to the first two movies
+        let (left_movie_ids, right_movie_ids) = movie_ids.split_at(2);
+        assert_eq!(left_movie_ids.len(), 2);
+        let movie_file_infos = [
+            MovieFileInfo {
+                extension: ".mp4".to_owned(),
+                mime_type: "video/mp4".to_owned(),
+            },
+            MovieFileInfo {
+                extension: ".wmv".to_owned(),
+                mime_type: "video/x-ms-wmv".to_owned(),
+            },
+        ];
+
+        for (movie_id, movie_file_info) in left_movie_ids.iter().zip(movie_file_infos.iter()) {
+            index
+                .update_movie_file_info(movie_id, movie_file_info.clone())
+                .await
+                .unwrap();
+        }
+
+        // check that the movie file info was added to the first two movies
+        for (movie_id, movie_file_info) in left_movie_ids.iter().zip(movie_file_infos.iter()) {
+            let movie = index.get_movie(movie_id).await.unwrap();
+            assert_eq!(movie.movie_file_info, Some(movie_file_info.clone()));
+        }
+
+        // check that the movie file info was not added to the other movies
+        for movie_id in right_movie_ids.iter() {
+            let movie = index.get_movie(movie_id).await.unwrap();
+            assert!(movie.movie_file_info.is_none());
+        }
+    }
 }

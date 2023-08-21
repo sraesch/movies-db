@@ -61,7 +61,7 @@ impl Default for SortingOrder {
 }
 
 /// The file info for a stored movie file.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct MovieFileInfo {
     /// the extension of the movie file in lower case, e.g., "mp4"
     pub extension: String,
