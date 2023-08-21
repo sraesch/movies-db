@@ -3,6 +3,9 @@ name: "Test"
 on:
   pull_request:
 
+env:
+  working-directory: "./movies-db-service"
+
 jobs:
   check:
     name: "Cargo check"
@@ -20,6 +23,7 @@ jobs:
       - uses: "actions-rs/cargo@v1"
         with:
           command: "check"
+          args: "--manifest-path movies-db-service/Cargo.toml"
 
   test:
     name: "Cargo test"
