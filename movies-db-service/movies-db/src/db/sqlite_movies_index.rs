@@ -14,9 +14,6 @@ use crate::{
 };
 
 pub struct SqliteMoviesIndex {
-    /// The options for the service.
-    options: Options,
-
     /// The connection to the database.
     connection: Mutex<Connection>,
 }
@@ -207,8 +204,6 @@ impl MoviesIndex for SqliteMoviesIndex {
                 return Err(Error::IO(format!("Failed to open SQLite DB{}", err)));
             }
             Ok(connection) => {
-                let options = options.clone();
-
                 match Self::create_tables(&connection) {
                     Err(err) => {
                         error!("Failed to create the tables: {}", err);
@@ -222,10 +217,7 @@ impl MoviesIndex for SqliteMoviesIndex {
 
                 let connection = Mutex::new(connection);
 
-                Ok(Self {
-                    options,
-                    connection,
-                })
+                Ok(Self { connection })
             }
         }
     }
@@ -341,22 +333,6 @@ impl MoviesIndex for SqliteMoviesIndex {
             date: date_added,
             movie_file_info,
         })
-    }
-
-    async fn change_movie_description(
-        &mut self,
-        id: &MovieId,
-        description: String,
-    ) -> Result<(), Error> {
-        todo!()
-    }
-
-    async fn change_movie_tags(&mut self, id: &MovieId, tags: Vec<String>) -> Result<(), Error> {
-        todo!()
-    }
-
-    async fn change_movie_title(&mut self, id: &MovieId, title: String) -> Result<(), Error> {
-        todo!()
     }
 
     async fn remove_movie(&mut self, id: &MovieId) -> Result<(), Error> {

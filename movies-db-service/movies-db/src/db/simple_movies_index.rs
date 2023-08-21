@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use chrono::DateTime;
-use log::{debug, error, info};
+use log::{error, info};
 use wildmatch::WildMatch;
 
 use async_trait::async_trait;
@@ -101,61 +101,6 @@ impl MoviesIndex for SimpleMoviesIndex {
 
         match self.movies.remove(id) {
             Some(_) => Ok(()),
-            None => {
-                error!("Movie with id {} not found", id);
-                Err(Error::NotFound(format!("Movie with id {} not found", id)))
-            }
-        }
-    }
-
-    async fn change_movie_description(
-        &mut self,
-        id: &MovieId,
-        description: String,
-    ) -> Result<(), Error> {
-        info!("Changing description of movie with id {}", id);
-        debug!("New description: {:?}", description);
-
-        match self.movies.get_mut(id) {
-            Some(movie_with_date) => {
-                movie_with_date.movie.description = description;
-                Ok(())
-            }
-            None => {
-                error!("Movie with id {} not found", id);
-                Err(Error::NotFound(format!("Movie with id {} not found", id)))
-            }
-        }
-    }
-
-    async fn change_movie_title(&mut self, id: &MovieId, title: String) -> Result<(), Error> {
-        info!("Changing title of movie with id {}", id);
-        debug!("New title: {:?}", title);
-
-        match self.movies.get_mut(id) {
-            Some(movie_with_date) => {
-                movie_with_date.movie.title = title;
-                Ok(())
-            }
-            None => {
-                error!("Movie with id {} not found", id);
-                Err(Error::NotFound(format!("Movie with id {} not found", id)))
-            }
-        }
-    }
-
-    async fn change_movie_tags(&mut self, id: &MovieId, tags: Vec<String>) -> Result<(), Error> {
-        info!("Changing tags of movie with id {}", id);
-
-        let mut tags = tags;
-        Self::process_tags(&mut tags);
-        debug!("New tags: {:?}", tags);
-
-        match self.movies.get_mut(id) {
-            Some(movie_with_date) => {
-                movie_with_date.movie.tags = tags;
-                Ok(())
-            }
             None => {
                 error!("Movie with id {} not found", id);
                 Err(Error::NotFound(format!("Movie with id {} not found", id)))

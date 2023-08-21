@@ -138,31 +138,6 @@ pub trait MoviesIndex: Send + Sync {
     /// `id` - The ID of the movie to remove.
     async fn remove_movie(&mut self, id: &MovieId) -> Result<(), Error>;
 
-    /// Changes the description of the movie for the given ID.
-    ///
-    /// # Arguments
-    /// `id` - The ID of the movie to change.
-    /// `description` - The new description of the movie.
-    async fn change_movie_description(
-        &mut self,
-        id: &MovieId,
-        description: String,
-    ) -> Result<(), Error>;
-
-    /// Changes the title of the movie for the given ID.
-    ///
-    /// # Arguments
-    /// `id` - The ID of the movie to change.
-    /// `title` - The new title of the movie.
-    async fn change_movie_title(&mut self, id: &MovieId, title: String) -> Result<(), Error>;
-
-    /// Changes the tags of the movie for the given ID.
-    ///
-    /// # Arguments
-    /// `id` - The ID of the movie to change.
-    /// `tags` - The new tags of the movie.
-    async fn change_movie_tags(&mut self, id: &MovieId, tags: Vec<String>) -> Result<(), Error>;
-
     /// Searches the movies index for movies matching the given query.
     ///
     /// # Arguments
