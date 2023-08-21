@@ -2,7 +2,10 @@ mod options;
 
 use anyhow::Result;
 use log::{error, info};
-use movies_db::{file_storage::FileStorage, Options as ServiceOptions, Service, SimpleMoviesIndex};
+use movies_db::{
+    file_storage::FileStorage, Options as ServiceOptions, Service,
+    SqliteMoviesIndex as MoviesIndexImpl,
+};
 use options::Options;
 
 use clap::Parser;
@@ -27,7 +30,7 @@ async fn run_program() -> Result<()> {
 
     let service_options: ServiceOptions = options.into();
 
-    let service: Service<SimpleMoviesIndex, FileStorage> = Service::new(&service_options)?;
+    let service: Service<MoviesIndexImpl, FileStorage> = Service::new(&service_options)?;
     service.run().await?;
 
     Ok(())
