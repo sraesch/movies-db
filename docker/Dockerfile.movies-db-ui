@@ -1,0 +1,3 @@
+FROM docker.io/nginx
+
+COPY movies-db-ui/build /usr/share/nginx/html
