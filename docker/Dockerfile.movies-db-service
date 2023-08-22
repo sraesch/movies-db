@@ -1,6 +1,6 @@
-FROM docker.io/alpine:3.18.2
+FROM docker.io/ubuntu:22.04
 
-RUN apk update && apk upgrade && apk add --no-cache bash gawk sed grep bc coreutils curl file
+RUN apt update && apt upgrade -y && apt install -y curl
 
 ADD movies-db-service/target/release/movies-db-cli /opt/movies-db/bin/movies-db-cli
 ADD docker/start_movie_service.sh /opt/movies-db/bin/start_movie_service.sh
@@ -11,6 +11,4 @@ RUN chmod +x /opt/movies-db/bin/start_movie_service.sh
 
 EXPOSE 3030
 
-CMD [ "sleep", "1000000" ]
-
-# ENTRYPOINT [ "/opt/movies-db/bin/start_movie_service.sh" ]
+ENTRYPOINT [ "/opt/movies-db/bin/start_movie_service.sh" ]
