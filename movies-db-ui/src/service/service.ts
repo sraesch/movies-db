@@ -171,4 +171,5 @@ export class Service {
     }
 }
 
-export const service = new Service("http://localhost:3030/api/v1");
+const SERVER_ADDRESS: string = (process.env.REACT_APP_SERVER_ADDRESS as string);
+export const service = new Service(SERVER_ADDRESS);
