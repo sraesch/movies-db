@@ -3,17 +3,21 @@ version: '3'
 services:
   movies-db-service:
     image: movies-db-service:latest
-    ports:
-      - "3030:3030"
     volumes:
       - movies-db-data:/var/data/movies
 
   movies-db-ui:
     image: movies-db-ui:latest
+    depends_on:
+      - movies-db-service
+
+  movies-db-gateway:
+    image: movies-db-gateway:latest
     ports:
       - "80:80"
     depends_on:
       - movies-db-service
+      - movies-db-ui
 
 volumes:
   movies-db-data:
