@@ -1,9 +1,9 @@
-FROM docker.io/ubuntu:22.04
+FROM ubuntu:22.04
 
 RUN apt update && apt upgrade -y && apt install -y curl
 
 COPY movies-db-service/target/release/movies-db-cli /opt/movies-db/bin/movies-db-cli
-COPY docker/start_movie_service.sh /opt/movies-db/bin/start_movie_service.sh
+COPY docker/service/start_movie_service.sh /opt/movies-db/bin/start_movie_service.sh
 
 RUN chown -R root:root /opt/movies-db
 RUN chmod +x /opt/movies-db/bin/movies-db-cli
