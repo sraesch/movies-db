@@ -1,3 +1,19 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: movies-db-storage-pvc
+  labels:
+    app: movies-db-service
+spec:
+  selector:
+    matchLabels:
+      app: movies-db-service
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,6 +33,13 @@ spec:
         image: srserver01/movies-db-service
         ports:
         - containerPort: 3030
+        volumeMounts:
+          - mountPath: /var/data/movies
+            name: movies-db-storage
+      volumes:
+        - name: movies-db-storage
+          persistentVolumeClaim:
+            claimName: movies-db-storage-pvc
 ---
 apiVersion: v1
 kind: Service
