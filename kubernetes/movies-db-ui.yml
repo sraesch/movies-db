@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: movies-db-ui
+spec:
+  selector:
+    matchLabels:
+      run: movies-db-ui
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        run: movies-db-ui
+    spec:
+      containers:
+      - name: movies-db-ui
+        image: srserver01/movies-db-ui
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: movies-db-ui
+  labels:
+    run: movies-db-ui
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+  selector:
+    run: movies-db-ui
