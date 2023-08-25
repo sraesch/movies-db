@@ -2,7 +2,7 @@ use std::fs::create_dir_all;
 
 use chrono::{DateTime, Utc};
 use itertools::Itertools;
-use log::{error, info};
+use log::{debug, error, info};
 use rusqlite::{Connection, Result};
 use tokio::sync::Mutex;
 
@@ -184,6 +184,8 @@ impl MoviesIndex for SqliteMoviesIndex {
 
         let mut sqlite_path = options.root_dir.clone();
         sqlite_path.push("movies.db");
+
+        debug!("SQLite database path: {}", sqlite_path.display());
 
         if sqlite_path.exists() {
             info!("Found existing movies.db");

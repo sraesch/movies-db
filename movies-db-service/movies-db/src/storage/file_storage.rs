@@ -1,7 +1,7 @@
 use std::{fs, path::PathBuf};
 
 use async_trait::async_trait;
-use log::info;
+use log::{info, trace};
 use tokio::fs as tokio_fs;
 
 use crate::{Error, MovieId, Options, ReadResource};
@@ -29,6 +29,7 @@ impl MovieStorage for FileStorage {
         Self: Sized,
     {
         let root_dir = options.root_dir.clone();
+        info!("Initialize file storage with path '{}'", root_dir.display());
 
         // make sure the root directory exists
         fs::create_dir_all(&root_dir).map_err(|e| {
@@ -66,6 +67,7 @@ impl MovieStorage for FileStorage {
         data_type: MovieDataType,
     ) -> Result<Self::W, Error> {
         let file_path = self.get_file_path(&id, data_type, true).await?;
+        trace!("Writing movie data to '{}'", file_path.display());
 
         let file = tokio_fs::File::create(&file_path).await.map_err(|e| {
             Error::Internal(format!(
@@ -84,6 +86,7 @@ impl MovieStorage for FileStorage {
         data_type: MovieDataType,
     ) -> Result<Self::R, Error> {
         let file_path = self.get_file_path(&id, data_type, false).await?;
+        trace!("Read movie data from '{}'", file_path.display());
 
         let file = tokio_fs::File::open(&file_path).await.map_err(|e| {
             Error::Internal(format!(
@@ -98,6 +101,7 @@ impl MovieStorage for FileStorage {
 
     async fn remove_movie_data(&self, id: MovieId) -> Result<(), Error> {
         let movie_data_path = self.get_movie_data_path(&id);
+        trace!("Remove movie data '{}'", movie_data_path.display());
 
         tokio_fs::remove_dir_all(&movie_data_path)
             .await
