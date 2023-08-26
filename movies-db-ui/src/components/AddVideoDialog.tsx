@@ -1,4 +1,5 @@
-import { Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography } from '@mui/material';
+import { Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Fab, TextField, Typography } from '@mui/material';
+import Add from '@mui/icons-material/Add';
 import * as React from 'react';
 import { MovieSubmit } from '../service/types';
 
@@ -35,6 +36,7 @@ export default function AddVideoDialog(props: AddVideoDialogProps): JSX.Element 
             return;
         } else if (tag.length > 0) {
             setTags([...tags, tag]);
+            setTag('');
         }
     }
 
@@ -70,7 +72,10 @@ export default function AddVideoDialog(props: AddVideoDialogProps): JSX.Element 
     }
 
     return (
-        <Dialog open={props.open} color='inherit' onClose={props.onClose} aria-label='close'>
+        <Dialog open={props.open}
+            color='inherit'
+            onClose={props.onClose}
+            aria-label='close'>
             <DialogTitle>Add Video</DialogTitle>
             <DialogContent>
                 <TextField
@@ -122,7 +127,6 @@ export default function AddVideoDialog(props: AddVideoDialogProps): JSX.Element 
                 </div>
                 <div style={{ display: "flex", flexDirection: "row", flexWrap: 'nowrap', justifyContent: 'space-between', alignItems: 'center' }}>
                     <TextField
-                        error={tag === ''}
                         autoFocus
                         margin="dense"
                         id="title"
@@ -133,7 +137,7 @@ export default function AddVideoDialog(props: AddVideoDialogProps): JSX.Element 
                         value={tag}
                         onChange={(e) => setTag(e.target.value)}
                     />
-                    <Button variant="outlined" onClick={() => handleAddTag(tag)}>Add</Button>
+                    <Fab color='secondary' size='small' disabled={tag === ''} onClick={() => handleAddTag(tag)}><Add /></Fab>
                 </div>
                 <div style={{ marginTop: "32px", flex: 'row' }}>
                     <input
@@ -144,7 +148,7 @@ export default function AddVideoDialog(props: AddVideoDialogProps): JSX.Element 
                         type="file"
                     />
                     <label htmlFor="raised-button-file">
-                        <Button variant='outlined' component="span">
+                        <Button variant='contained' color='secondary' component="span">
                             Choose Video
                         </Button>
                     </label>
@@ -154,8 +158,8 @@ export default function AddVideoDialog(props: AddVideoDialogProps): JSX.Element 
                 </div>
             </DialogContent>
             <DialogActions>
-                <Button onClick={props.onClose}>Cancel</Button>
-                <Button disabled={title.length === 0 || !file} onClick={handleSubmit} autoFocus>
+                <Button color='secondary' onClick={props.onClose}>Cancel</Button>
+                <Button color='primary' disabled={title.length === 0 || !file} onClick={handleSubmit} autoFocus>
                     Add
                 </Button>
             </DialogActions>
