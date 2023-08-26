@@ -13,10 +13,11 @@ spec:
         run: movies-db-ui
     spec:
       containers:
-      - name: movies-db-ui
-        image: srserver01/movies-db-ui
-        ports:
-        - containerPort: 80
+        - name: movies-db-ui
+          image: srserver01/movies-db-ui
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
 ---
 apiVersion: v1
 kind: Service
@@ -26,7 +27,7 @@ metadata:
     run: movies-db-ui
 spec:
   ports:
-  - port: 80
-    protocol: TCP
+    - port: 80
+      protocol: TCP
   selector:
     run: movies-db-ui

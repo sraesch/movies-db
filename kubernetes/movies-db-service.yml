@@ -29,13 +29,17 @@ spec:
         run: movies-db-service
     spec:
       containers:
-      - name: movies-db-service
-        image: srserver01/movies-db-service
-        ports:
-        - containerPort: 3030
-        volumeMounts:
-          - mountPath: /var/data/movies
-            name: movies-db-storage
+        - name: movies-db-service
+          image: srserver01/movies-db-service
+          imagePullPolicy: Always
+          env:
+            - name: LOG_LEVEL
+              value: "trace"
+          ports:
+            - containerPort: 3030
+          volumeMounts:
+            - mountPath: /var/data/movies
+              name: movies-db-storage
       volumes:
         - name: movies-db-storage
           persistentVolumeClaim:
@@ -49,7 +53,7 @@ metadata:
     run: movies-db-service
 spec:
   ports:
-  - port: 3030
-    protocol: TCP
+    - port: 3030
+      protocol: TCP
   selector:
     run: movies-db-service
