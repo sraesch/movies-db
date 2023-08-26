@@ -161,6 +161,9 @@ impl FileStorage {
             MovieDataType::MovieData { ext } => {
                 file_path.push(format!("movie.{}", ext));
             }
+            MovieDataType::ScreenshotData { ext } => {
+                file_path.push(format!("preview.{}", ext));
+            }
         }
 
         Ok(file_path)
@@ -178,7 +181,7 @@ mod test {
     use super::*;
 
     #[tokio::test]
-    async fn test_write_movie_data() {
+    async fn test_write_movie_data_file() {
         let root_dir = TempDir::new("movies-db").unwrap();
         let mut options: Options = Default::default();
         options.root_dir = root_dir.path().to_path_buf();
@@ -229,6 +232,108 @@ mod test {
                 id0,
                 MovieDataType::MovieData {
                     ext: "mp4".to_string(),
+                }
+            )
+            .await
+            .is_err());
+    }
+
+    #[tokio::test]
+    async fn test_write_movie_data_screenshot() {
+        let root_dir = TempDir::new("movies-db").unwrap();
+        let mut options: Options = Default::default();
+        options.root_dir = root_dir.path().to_path_buf();
+
+        let storage = FileStorage::new(&options).unwrap();
+
+        let id0 = generate_movie_id();
+
+        // write movie screenshot data to id0
+        {
+            let mut w = storage
+                .write_movie_data(
+                    id0.clone(),
+                    MovieDataType::ScreenshotData {
+                        ext: "png".to_string(),
+                    },
+                )
+                .await
+                .unwrap();
+
+            w.write_all(b"Screenshot Data!\n").await.unwrap();
+        }
+
+        // write movie data to id0
+        {
+            let mut w = storage
+                .write_movie_data(
+                    id0.clone(),
+                    MovieDataType::MovieData {
+                        ext: "mp4".to_string(),
+                    },
+                )
+                .await
+                .unwrap();
+
+            w.write_all(b"Movie Data!\n").await.unwrap();
+        }
+
+        // read movie data from id0
+        {
+            let mut r = storage
+                .read_movie_data(
+                    id0.clone(),
+                    MovieDataType::MovieData {
+                        ext: "mp4".to_string(),
+                    },
+                )
+                .await
+                .unwrap();
+
+            let mut s = String::new();
+
+            r.read_to_string(&mut s).await.unwrap();
+
+            assert_eq!(s, "Movie Data!\n");
+        }
+
+        // read screenshot data from id0
+        {
+            let mut r = storage
+                .read_movie_data(
+                    id0.clone(),
+                    MovieDataType::ScreenshotData {
+                        ext: "png".to_string(),
+                    },
+                )
+                .await
+                .unwrap();
+
+            let mut s = String::new();
+
+            r.read_to_string(&mut s).await.unwrap();
+
+            assert_eq!(s, "Screenshot Data!\n");
+        }
+
+        // remove movie data from id0
+        storage.remove_movie_data(id0.clone()).await.unwrap();
+
+        assert!(storage
+            .read_movie_data(
+                id0.clone(),
+                MovieDataType::MovieData {
+                    ext: "mp4".to_string(),
+                }
+            )
+            .await
+            .is_err());
+
+        assert!(storage
+            .read_movie_data(
+                id0.clone(),
+                MovieDataType::ScreenshotData {
+                    ext: "png".to_string(),
                 }
             )
             .await

@@ -85,7 +85,15 @@ where
                 .route("/movie", web::delete().to(Self::handle_delete_movie))
                 .route("/movie/search", web::get().to(Self::handle_search_movie))
                 .route("/movie/file", web::post().to(Self::handle_upload_movie))
-                .route("/movie/file", web::get().to(Self::handle_download_movie));
+                .route("/movie/file", web::get().to(Self::handle_download_movie))
+                .route(
+                    "/movie/screenshot",
+                    web::post().to(Self::handle_upload_screenshot),
+                )
+                .route(
+                    "/movie/screenshot",
+                    web::get().to(Self::handle_download_screenshot),
+                );
 
             App::new()
                 .wrap(cors)
@@ -237,5 +245,45 @@ where
         let handler = handler.read().await;
 
         handler.handle_download_movie(id).await
+    }
+
+    /// Handles the POST /api/v1/movie/screenshot endpoint.
+    ///
+    /// # Arguments
+    /// * `handler` - The service handler.
+    /// * `query` - The query parameters.
+    /// * `multipart` - The multipart data.
+    async fn handle_upload_screenshot(
+        handler: web::Data<RwLock<ServiceHandler<I, S>>>,
+        query: web::Query<MovieIdQuery>,
+        multipart: Multipart,
+    ) -> Result<impl Responder> {
+        debug!("Handling POST /api/v1/movie/screenshot");
+        trace!("Request query: {:?}", query);
+
+        let id: MovieId = query.into_inner().id;
+
+        let mut handler = handler.write().await;
+
+        handler.handle_upload_screenshot(id, multipart).await
+    }
+
+    /// Handles the GET /api/v1/movie/screenshot endpoint.
+    ///
+    /// # Arguments
+    /// * `handler` - The service handler.
+    /// * `query` - The query parameters.
+    async fn handle_download_screenshot(
+        handler: web::Data<RwLock<ServiceHandler<I, S>>>,
+        query: web::Query<MovieIdQuery>,
+    ) -> Result<impl Responder> {
+        debug!("Handling GET /api/v1/movie/screenshot");
+        trace!("Request query: {:?}", query);
+
+        let id: MovieId = query.into_inner().id;
+
+        let handler = handler.read().await;
+
+        handler.handle_download_screenshot(id).await
     }
 }
