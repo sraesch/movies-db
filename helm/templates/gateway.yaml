@@ -3,19 +3,25 @@ kind: Deployment
 metadata:
   name: movies-db-gateway
 spec:
+{{- if .Values.numGatewayPods }}
+  replicas: {{ .Values.numGatewayPods }}
+{{- end }}
   selector:
     matchLabels:
       run: movies-db-gateway
-  replicas: 1
   template:
     metadata:
       labels:
         run: movies-db-gateway
     spec:
+{{- if .Values.imagePullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.imagePullSecret }}
+{{- end }}
       containers:
         - name: movies-db-gateway
-          image: srserver01/movies-db-gateway
-          imagePullPolicy: Always
+          image: {{if .Values.registry }}{{ .Values.registry }}/{{ end }}srserver01/movies-db-gateway
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
           ports:
             - containerPort: 80
 ---
@@ -30,6 +36,6 @@ spec:
   ports:
     - port: 80
       protocol: TCP
-      nodePort: 30087
+      nodePort: {{ .Values.entryNodePort }}
   selector:
     run: movies-db-gateway

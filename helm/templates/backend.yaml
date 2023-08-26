@@ -9,32 +9,38 @@ spec:
     matchLabels:
       app: movies-db-service
   accessModes:
-    - ReadWriteOnce
+    - {{ .Values.backend.storage_class }}
   resources:
     requests:
-      storage: 100Gi
+      storage: {{ .Values.backend.storage }}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: movies-db-service
 spec:
+{{- if .Values.numGatewayPods }}
+  replicas: {{ .Values.numGatewayPods }}
+{{- end }}
   selector:
     matchLabels:
       run: movies-db-service
-  replicas: 1
   template:
     metadata:
       labels:
         run: movies-db-service
     spec:
+{{- if .Values.imagePullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.imagePullSecret }}
+{{- end }}
       containers:
         - name: movies-db-service
-          image: srserver01/movies-db-service
-          imagePullPolicy: Always
+          image: {{if .Values.registry }}{{ .Values.registry }}/{{ end }}srserver01/movies-db-service
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
           env:
             - name: LOG_LEVEL
-              value: "trace"
+              value: {{ .Values.backend.log_level }}
           ports:
             - containerPort: 3030
           volumeMounts:
