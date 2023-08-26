@@ -8,7 +8,7 @@ use async_trait::async_trait;
 
 use crate::{
     generate_movie_id, Error, Movie, MovieDetailed, MovieFileInfo, MovieId, MovieSearchQuery,
-    MoviesIndex, Options, SortingField, SortingOrder,
+    MoviesIndex, Options, ScreenshotInfo, SortingField, SortingOrder,
 };
 
 /// A very simple and naive in-memory implementation of the movies index.
@@ -56,6 +56,7 @@ impl MoviesIndex for SimpleMoviesIndex {
         let mut movie_with_date = MovieDetailed {
             movie,
             movie_file_info: None,
+            screenshot_file_info: None,
             date: chrono::Utc::now(),
         };
         Self::process_tags(&mut movie_with_date.movie.tags);
@@ -87,6 +88,25 @@ impl MoviesIndex for SimpleMoviesIndex {
         match self.movies.get_mut(id) {
             Some(movie) => {
                 movie.movie_file_info = Some(movie_file_info);
+                Ok(())
+            }
+            None => {
+                error!("Movie with id {} not found", id);
+                Err(Error::NotFound(format!("Movie with id {} not found", id)))
+            }
+        }
+    }
+
+    async fn update_screenshot_info(
+        &mut self,
+        id: &MovieId,
+        screenshot_info: ScreenshotInfo,
+    ) -> Result<(), Error> {
+        info!("Updating screenshot info for movie with id {}", id);
+
+        match self.movies.get_mut(id) {
+            Some(movie) => {
+                movie.screenshot_file_info = Some(screenshot_info);
                 Ok(())
             }
             None => {
@@ -456,6 +476,59 @@ mod test {
         for movie_id in right_movie_ids.iter() {
             let movie = index.get_movie(movie_id).await.unwrap();
             assert!(movie.movie_file_info.is_none());
+        }
+    }
+
+    #[tokio::test]
+    async fn test_add_screenshot_info() {
+        let mut index = SimpleMoviesIndex::new(&Options::default()).unwrap();
+        let movies = create_test_movies();
+
+        let mut movie_ids: Vec<MovieId> = Vec::with_capacity(movies.len());
+        for movie in movies.iter() {
+            let ret = index.add_movie(movie.clone()).await;
+            assert!(ret.is_ok());
+
+            movie_ids.push(ret.unwrap());
+        }
+
+        // make sure non of the added movies has a screenshot info
+        for movie_id in movie_ids.iter() {
+            let movie = index.get_movie(&movie_id).await.unwrap();
+            assert!(movie.screenshot_file_info.is_none());
+        }
+
+        // add screenshot info only to the first two movies
+        let (left_movie_ids, right_movie_ids) = movie_ids.split_at(2);
+        assert_eq!(left_movie_ids.len(), 2);
+        let screenshot_infos = [
+            ScreenshotInfo {
+                extension: ".png".to_owned(),
+                mime_type: "video/png".to_owned(),
+            },
+            ScreenshotInfo {
+                extension: ".jpeg".to_owned(),
+                mime_type: "image/jpeg".to_owned(),
+            },
+        ];
+
+        for (movie_id, screenshot_info) in left_movie_ids.iter().zip(screenshot_infos.iter()) {
+            index
+                .update_screenshot_info(movie_id, screenshot_info.clone())
+                .await
+                .unwrap();
+        }
+
+        // check that the movie file info was added to the first two movies
+        for (movie_id, screenshot_info) in left_movie_ids.iter().zip(screenshot_infos.iter()) {
+            let movie: MovieDetailed = index.get_movie(movie_id).await.unwrap();
+            assert_eq!(movie.screenshot_file_info, Some(screenshot_info.clone()));
+        }
+
+        // check that the movie file info was not added to the other movies
+        for movie_id in right_movie_ids.iter() {
+            let movie = index.get_movie(movie_id).await.unwrap();
+            assert!(movie.screenshot_file_info.is_none());
         }
     }
 }

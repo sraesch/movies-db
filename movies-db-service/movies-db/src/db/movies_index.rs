@@ -25,6 +25,7 @@ pub struct Movie {
 pub struct MovieDetailed {
     pub movie: Movie,
     pub movie_file_info: Option<MovieFileInfo>,
+    pub screenshot_file_info: Option<ScreenshotInfo>,
     pub date: DateTime<Utc>,
 }
 
@@ -67,6 +68,16 @@ pub struct MovieFileInfo {
     pub extension: String,
 
     // the mime type of the movie file, e.g., "video/mp4"
+    pub mime_type: String,
+}
+
+/// The screenshot info for a stored movie file.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ScreenshotInfo {
+    /// the extension of the screenshot file in lower case, e.g., "png"
+    pub extension: String,
+
+    // the mime type of the screenshot file, e.g., "image/png"
     pub mime_type: String,
 }
 
@@ -130,6 +141,17 @@ pub trait MoviesIndex: Send + Sync {
         &mut self,
         id: &MovieId,
         movie_file_info: MovieFileInfo,
+    ) -> Result<(), Error>;
+
+    /// Updates the screenshot info for the given ID.
+    ///
+    /// # Arguments
+    /// `id` - The ID of the movie to update.
+    /// `screenshot_info` - The new screenshot info.
+    async fn update_screenshot_info(
+        &mut self,
+        id: &MovieId,
+        screenshot_info: ScreenshotInfo,
     ) -> Result<(), Error>;
 
     /// Removes the movie for the given ID.
