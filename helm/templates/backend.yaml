@@ -1,0 +1,65 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: movies-db-storage-pvc
+  labels:
+    app: movies-db-service
+spec:
+  selector:
+    matchLabels:
+      app: movies-db-service
+  accessModes:
+    - {{ .Values.backend.storage_class }}
+  resources:
+    requests:
+      storage: {{ .Values.backend.storage }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: movies-db-service
+spec:
+{{- if .Values.numGatewayPods }}
+  replicas: {{ .Values.numGatewayPods }}
+{{- end }}
+  selector:
+    matchLabels:
+      run: movies-db-service
+  template:
+    metadata:
+      labels:
+        run: movies-db-service
+    spec:
+{{- if .Values.imagePullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.imagePullSecret }}
+{{- end }}
+      containers:
+        - name: movies-db-service
+          image: {{if .Values.registry }}{{ .Values.registry }}/{{ end }}srserver01/movies-db-service
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          env:
+            - name: LOG_LEVEL
+              value: {{ .Values.backend.log_level }}
+          ports:
+            - containerPort: 3030
+          volumeMounts:
+            - mountPath: /var/data/movies
+              name: movies-db-storage
+      volumes:
+        - name: movies-db-storage
+          persistentVolumeClaim:
+            claimName: movies-db-storage-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: movies-db-service
+  labels:
+    run: movies-db-service
+spec:
+  ports:
+    - port: 3030
+      protocol: TCP
+  selector:
+    run: movies-db-service

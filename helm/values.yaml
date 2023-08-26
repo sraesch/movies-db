@@ -1,0 +1,31 @@
+# Optionally, provide the registry for pulling the images. By default the docker hub registry is being used. 
+
+# registry:
+
+imagePullPolicy: Always
+
+# Use a DockerPullSecret 
+imagePullSecret:
+
+# The externally exposed (Node-)port.
+entryNodePort: 30042
+
+# The configuration of the backend service
+backend:
+  # The storage size for the movies
+  storage: 100Gi
+
+  storage_class: ReadWriteMany
+
+  # The log level for the backend service
+  log_level: info
+
+
+# Set the number of pods to be deployed for delivering the UI application.
+numUIPods: 1
+
+# Set the number of gateway pods to be deployed for delivering overall API.
+numGatewayPods: 1
+
+# Set the number of pods to be deployed for movies-db backend service.
+numBackendPods: 1

@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: movies-db-ui
+spec:
+{{- if .Values.numUIPods }}
+  replicas: {{ .Values.numUIPods }}
+{{- end }}
+  selector:
+    matchLabels:
+      run: movies-db-ui
+  template:
+    metadata:
+      labels:
+        run: movies-db-ui
+    spec:
+{{- if .Values.imagePullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.imagePullSecret }}
+{{- end }}
+      containers:
+        - name: movies-db-ui
+          image: {{if .Values.registry }}{{ .Values.registry }}/{{ end }}srserver01/movies-db-ui
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: movies-db-ui
+  labels:
+    run: movies-db-ui
+spec:
+  ports:
+    - port: 80
+      protocol: TCP
+  selector:
+    run: movies-db-ui
