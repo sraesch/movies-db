@@ -22,7 +22,7 @@ Cargo.lock
 /coverage
 
 # production
-/build
+/movies-db-ui/build
 
 # misc
 .DS_Store

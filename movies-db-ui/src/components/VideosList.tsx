@@ -58,6 +58,7 @@ export default function VideosList(): JSX.Element {
         flexWrap: 'wrap',
         justifyContent: 'flex-start',
         alignItems: 'flex-start',
+        flexGrow: 1,
     }}>
         <YesNoDialog
             title='Delete movie'
