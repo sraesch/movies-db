@@ -10,6 +10,10 @@ pub enum MovieDataType {
         /// The file extension of the movie data.
         ext: String,
     },
+    ScreenshotData {
+        /// The file extension of the screenshot data.
+        ext: String,
+    },
 }
 
 /// The trait for reading movie data.
