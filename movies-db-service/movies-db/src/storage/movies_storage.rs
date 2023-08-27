@@ -27,7 +27,7 @@ pub trait ReadResource: AsyncRead + Unpin + 'static {
 /// The trait for storing movie data.
 #[async_trait]
 pub trait MovieStorage: Send + Sync {
-    type W: AsyncWrite + Unpin;
+    type W: AsyncWrite + Unpin + Send;
     type R: ReadResource;
 
     /// Creates a new instance of the storage.

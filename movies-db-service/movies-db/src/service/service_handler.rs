@@ -14,9 +14,11 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::io::AsyncWriteExt;
-use tokio::sync::RwLock;
+use tokio::sync::{mpsc, RwLock};
 
 use tokio_util::io::ReaderStream;
+
+use super::preview_generator::ScreenshotRequest;
 
 pub struct ServiceHandler<I, S>
 where
@@ -25,6 +27,7 @@ where
 {
     index: Arc<RwLock<I>>,
     storage: Arc<RwLock<S>>,
+    preview_requests: mpsc::UnboundedSender<ScreenshotRequest>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -43,8 +46,17 @@ where
     /// # Arguments
     /// * `index` - The movies index.
     /// * `storage` - The movie storage.
-    pub async fn new(index: Arc<RwLock<I>>, storage: Arc<RwLock<S>>) -> Result<Self, Error> {
-        Ok(Self { index, storage })
+    /// * `preview_requests` - The channel for sending preview requests.
+    pub async fn new(
+        index: Arc<RwLock<I>>,
+        storage: Arc<RwLock<S>>,
+        preview_requests: mpsc::UnboundedSender<ScreenshotRequest>,
+    ) -> Result<Self, Error> {
+        Ok(Self {
+            index,
+            storage,
+            preview_requests,
+        })
     }
 
     /// Handles the request to add a new movie.
@@ -214,6 +226,12 @@ where
         }
 
         info!("Uploading movie {} ... DONE", id);
+        if let Err(err) = self.preview_requests.send(ScreenshotRequest {
+            movie_id: id.clone(),
+            ext: "jpg".to_string(),
+        }) {
+            error!("Error sending preview request: {}", err);
+        }
 
         Ok(actix_web::HttpResponse::Ok())
     }

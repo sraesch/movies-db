@@ -1,33 +1,45 @@
-use log::{debug, error, info, trace};
-use tokio::{io::AsyncWriteExt, sync::mpsc};
+use std::sync::Arc;
 
-use crate::{ffmpeg::FFMpeg, MovieDataType, MovieId, MovieStorage};
+use log::{debug, error, info, trace};
+use tokio::{
+    io::AsyncWriteExt,
+    sync::{mpsc, RwLock},
+};
+
+use crate::{ffmpeg::FFMpeg, MovieDataType, MovieId, MovieStorage, MoviesIndex};
 
 /// The request to generate a preview.
 #[derive(Clone, Debug)]
 pub struct ScreenshotRequest {
-    movie_id: MovieId,
-    ext: String,
+    pub movie_id: MovieId,
+    pub ext: String,
 }
 
-pub struct PreviewGenerator<S: MovieStorage> {
+pub struct PreviewGenerator<I: MoviesIndex, S: MovieStorage> {
     ffmpeg: FFMpeg,
-    storage: S,
+    index: Arc<RwLock<I>>,
+    storage: Arc<RwLock<S>>,
     recv_preview: mpsc::UnboundedReceiver<ScreenshotRequest>,
 }
 
-impl<S: MovieStorage> PreviewGenerator<S> {
+impl<I: MoviesIndex, S: MovieStorage> PreviewGenerator<I, S> {
     /// Creates a new instance of the preview generator.
     ///
     /// # Arguments
     /// * `ffmpeg` - The ffmpeg instance.
+    /// * `index` - The movie index.
     /// * `storage` - The movie storage.
-    pub fn new(ffmpeg: FFMpeg, storage: S) -> (Self, mpsc::UnboundedSender<ScreenshotRequest>) {
+    pub fn new(
+        ffmpeg: FFMpeg,
+        index: Arc<RwLock<I>>,
+        storage: Arc<RwLock<S>>,
+    ) -> (Self, mpsc::UnboundedSender<ScreenshotRequest>) {
         let (send_preview, recv_preview) = mpsc::unbounded_channel();
 
         (
             Self {
                 ffmpeg,
+                index,
                 storage,
                 recv_preview,
             },
@@ -42,6 +54,8 @@ impl<S: MovieStorage> PreviewGenerator<S> {
 
             let file_path = match self
                 .storage
+                .read()
+                .await
                 .get_file_path(
                     r.movie_id.clone(),
                     MovieDataType::MovieData { ext: r.ext.clone() },
@@ -91,6 +105,8 @@ impl<S: MovieStorage> PreviewGenerator<S> {
             trace!("Write screenshot data...");
             let mut writer = match self
                 .storage
+                .read()
+                .await
                 .write_movie_data(
                     r.movie_id.clone(),
                     MovieDataType::ScreenshotData { ext: r.ext.clone() },
@@ -111,5 +127,7 @@ impl<S: MovieStorage> PreviewGenerator<S> {
                 continue;
             }
         }
+
+        info!("Preview generator loop stopped");
     }
 }
