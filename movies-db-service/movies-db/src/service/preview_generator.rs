@@ -6,7 +6,7 @@ use tokio::{
     sync::{mpsc, RwLock},
 };
 
-use crate::{ffmpeg::FFMpeg, MovieDataType, MovieId, MovieStorage, MoviesIndex};
+use crate::{ffmpeg::FFMpeg, MovieDataType, MovieId, MovieStorage, MoviesIndex, ScreenshotInfo};
 
 /// The request to generate a preview.
 #[derive(Clone, Debug)]
@@ -50,7 +50,7 @@ impl<I: MoviesIndex, S: MovieStorage> PreviewGenerator<I, S> {
     /// Runs the preview generator loop.
     pub async fn run(&mut self) {
         while let Some(r) = self.recv_preview.recv().await {
-            info!("Generating preview for movie '{}'", r.movie_id);
+            debug!("Generating preview for request '{:?}'", r);
 
             let file_path = match self
                 .storage
@@ -109,7 +109,9 @@ impl<I: MoviesIndex, S: MovieStorage> PreviewGenerator<I, S> {
                 .await
                 .write_movie_data(
                     r.movie_id.clone(),
-                    MovieDataType::ScreenshotData { ext: r.ext.clone() },
+                    MovieDataType::ScreenshotData {
+                        ext: "png".to_owned(),
+                    },
                 )
                 .await
             {
@@ -125,6 +127,29 @@ impl<I: MoviesIndex, S: MovieStorage> PreviewGenerator<I, S> {
                 error!("Failed to write screenshot data for movie '{}'", r.movie_id);
                 error!("Error: {}", err);
                 continue;
+            }
+
+            // update movie index about the new screenshot
+            trace!("Update movie index...");
+            match self
+                .index
+                .write()
+                .await
+                .update_screenshot_info(
+                    &r.movie_id,
+                    ScreenshotInfo {
+                        extension: "png".to_owned(),
+                        mime_type: "image/png".to_owned(),
+                    },
+                )
+                .await
+            {
+                Ok(_) => {}
+                Err(err) => {
+                    error!("Failed to update movie index for movie '{}'", r.movie_id);
+                    error!("Error: {}", err);
+                    continue;
+                }
             }
         }
 
