@@ -9,6 +9,9 @@ export interface MovieSubmit {
     tags?: string[];
 }
 
+/**
+ * The interface for for infos about the movie file data.
+ */
 export interface MovieFileInfo {
     /// the extension of the movie file in lower case, e.g., "mp4"
     extension: string,
@@ -18,11 +21,23 @@ export interface MovieFileInfo {
 }
 
 /**
+ * The interface for for infos about the screenshot data.
+ */
+export interface ScreenshotInfo {
+    /// the extension of the image, e.g., "png"
+    extension: string,
+
+    // the mime type of the movie file, e.g., "image/png"
+    mime_type: string,
+}
+
+/**
  * A detailed movie with additional information.
  */
 export interface MovieDetailed {
     movie: MovieSubmit;
     movie_file_info?: MovieFileInfo;
+    screenshot_file_info?: ScreenshotInfo;
     date: string;
 }
 
