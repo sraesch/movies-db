@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use log::info;
+use log::{info, trace};
 use tokio::process::Command;
 
 use crate::Error;
@@ -52,6 +52,7 @@ impl FFMpeg {
 
     /// Retur ns the duration of the given movie file in seconds.
     pub async fn get_movie_duration(&self, movie_file: &Path) -> Result<f64, Error> {
+        trace!("get_movie_duration: movie_file={}", movie_file.display());
         let output = Command::new(&self.ffprobe_bin_path)
             .arg("-v")
             .arg("error")

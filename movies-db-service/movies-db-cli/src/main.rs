@@ -12,6 +12,8 @@ use clap::Parser;
 
 use log::LevelFilter;
 
+use std::io::Write;
+
 /// Parses the program arguments and returns None, if no arguments were provided and Some otherwise.
 fn parse_args() -> Result<Options> {
     let options = Options::parse();
@@ -20,7 +22,20 @@ fn parse_args() -> Result<Options> {
 
 /// Initializes the program logging
 fn initialize_logging(filter: LevelFilter) {
-    simple_logging::log_to(std::io::stdout(), filter);
+    env_logger::Builder::new()
+        .format(|buf, record| {
+            writeln!(
+                buf,
+                "{}:{} {} [{}] - {}",
+                record.file().unwrap_or("unknown"),
+                record.line().unwrap_or(0),
+                chrono::Local::now().format("%Y-%m-%dT%H:%M:%S"),
+                record.level(),
+                record.args()
+            )
+        })
+        .filter_level(filter)
+        .init();
 }
 
 /// Runs the program.

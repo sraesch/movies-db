@@ -90,6 +90,7 @@ where
         let handler = self
             .create_service_handler(index.clone(), storage.clone(), preview_requests)
             .await?;
+        let handler = RwLock::new(handler);
         let handler = web::Data::new(handler);
 
         info!("Running the HTTP server...");

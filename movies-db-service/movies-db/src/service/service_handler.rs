@@ -223,15 +223,16 @@ where
                     return Err(actix_web::error::ErrorInternalServerError(err));
                 }
             }
+
+            if let Err(err) = self.preview_requests.send(ScreenshotRequest {
+                movie_id: id.clone(),
+                ext: ext.clone(),
+            }) {
+                error!("Error sending preview request: {}", err);
+            }
         }
 
         info!("Uploading movie {} ... DONE", id);
-        if let Err(err) = self.preview_requests.send(ScreenshotRequest {
-            movie_id: id.clone(),
-            ext: "jpg".to_string(),
-        }) {
-            error!("Error sending preview request: {}", err);
-        }
 
         Ok(actix_web::HttpResponse::Ok())
     }
