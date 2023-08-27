@@ -43,6 +43,8 @@ where
         let options = options.clone();
         let phantom = PhantomData {};
 
+        // check if ffmpeg and ffprobe exist
+
         Ok(Self { phantom, options })
     }
 
@@ -66,7 +68,7 @@ where
 
     /// Runs the HTTP server.
     async fn run_http_server(&self) -> Result<(), Error> {
-        let handler = self.create_service_handler()?;
+        let handler = self.create_service_handler().await?;
         let handler = RwLock::new(handler);
         let handler = web::Data::new(handler);
 
@@ -117,9 +119,9 @@ where
     }
 
     /// Creates a new instance of the service handler.
-    fn create_service_handler(&self) -> Result<ServiceHandler<I, S>, Error> {
+    async fn create_service_handler(&self) -> Result<ServiceHandler<I, S>, Error> {
         info!("Creating the service handler...");
-        match ServiceHandler::new(self.options.clone()) {
+        match ServiceHandler::new(self.options.clone()).await {
             Err(err) => {
                 error!("Creating the service handler...FAILED");
                 error!("Error: {}", err);

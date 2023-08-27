@@ -16,6 +16,8 @@ use tokio::io::AsyncWriteExt;
 
 use tokio_util::io::ReaderStream;
 
+use super::ffmpeg::FFMpeg;
+
 pub struct ServiceHandler<I, S>
 where
     I: MoviesIndex,
@@ -23,6 +25,7 @@ where
 {
     index: I,
     storage: S,
+    ffmpeg: FFMpeg,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -40,11 +43,16 @@ where
     ///
     /// # Arguments
     /// * `options` - The options for the service handler.
-    pub fn new(options: Options) -> Result<Self, Error> {
+    pub async fn new(options: Options) -> Result<Self, Error> {
         let index = I::new(&options)?;
         let storage = S::new(&options)?;
+        let ffmpeg = FFMpeg::new(&options.ffmpeg).await?;
 
-        Ok(Self { index, storage })
+        Ok(Self {
+            index,
+            storage,
+            ffmpeg,
+        })
     }
 
     /// Handles the request to add a new movie.
