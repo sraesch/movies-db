@@ -1,4 +1,4 @@
-name: "RustTest"
+name: "RustServiceTest"
 
 on:
   pull_request:
