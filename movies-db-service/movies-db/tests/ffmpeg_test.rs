@@ -17,8 +17,6 @@ mod test {
 
     #[tokio::test]
     async fn test_ffmpeg_init() {
-        let temp_dir = TempDir::new("test_ffmpeg_version").unwrap();
-
         // test only works if ffmpeg and ffprobe are located in /usr/bin
         FFMpeg::new(&Path::new("/usr/bin")).await.unwrap();
     }

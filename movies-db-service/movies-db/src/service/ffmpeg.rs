@@ -166,11 +166,11 @@ impl FFMpeg {
             )));
         }
 
-        info!(
-            "{} Version Info: {}",
-            name,
-            String::from_utf8_lossy(&output.stdout)
-        );
+        // extract first line of version info
+        let output = String::from_utf8_lossy(&output.stdout);
+        let output = output.lines().next().unwrap_or_default();
+
+        info!("{} Version Info: {}", name, output);
 
         Ok(())
     }

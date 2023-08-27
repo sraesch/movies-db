@@ -5,10 +5,7 @@ use actix_multipart::Multipart;
 use actix_web::{web, App, HttpServer, Responder, Result};
 
 use log::{debug, error, info, trace};
-use tokio::{
-    join,
-    sync::{mpsc, RwLock},
-};
+use tokio::sync::{mpsc, RwLock};
 
 use crate::{
     ffmpeg::FFMpeg, service::preview_generator::PreviewGenerator, Error, Movie, MovieId,
