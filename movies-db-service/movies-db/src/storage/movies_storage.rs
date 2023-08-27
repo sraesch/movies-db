@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use tokio::io::{AsyncRead, AsyncWrite};
 
 use crate::{Error, MovieId, Options};
@@ -25,7 +27,7 @@ pub trait ReadResource: AsyncRead + Unpin + 'static {
 /// The trait for storing movie data.
 #[async_trait]
 pub trait MovieStorage: Send + Sync {
-    type W: AsyncWrite + Unpin;
+    type W: AsyncWrite + Unpin + Send;
     type R: ReadResource;
 
     /// Creates a new instance of the storage.
@@ -69,4 +71,15 @@ pub trait MovieStorage: Send + Sync {
         id: MovieId,
         data_type: MovieDataType,
     ) -> Result<Self::R, Error>;
+
+    /// Returns a path to the resource if the movie storage can provide it.
+    ///
+    /// # Arguments
+    /// * `id` - The movie id for which to read the data.
+    /// * `data_type` - The type of data to read.
+    async fn get_file_path(
+        &self,
+        id: MovieId,
+        data_type: MovieDataType,
+    ) -> Result<Option<PathBuf>, Error>;
 }

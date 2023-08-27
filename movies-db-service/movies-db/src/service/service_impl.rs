@@ -1,17 +1,20 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, sync::Arc};
 
 use actix_cors::Cors;
 use actix_multipart::Multipart;
 use actix_web::{web, App, HttpServer, Responder, Result};
 
 use log::{debug, error, info, trace};
-use tokio::sync::RwLock;
+use tokio::sync::{mpsc, RwLock};
 
-use crate::{Error, Movie, MovieId, MovieSearchQuery, MovieStorage, MoviesIndex, Options};
+use crate::{
+    ffmpeg::FFMpeg, service::preview_generator::PreviewGenerator, Error, Movie, MovieId,
+    MovieSearchQuery, MovieStorage, MoviesIndex, Options,
+};
 
 pub type BoxError = Box<dyn std::error::Error + Send + Sync + 'static>;
 
-use super::service_handler::ServiceHandler;
+use super::{preview_generator::ScreenshotRequest, service_handler::ServiceHandler};
 
 use serde::{Deserialize, Serialize};
 
@@ -66,7 +69,24 @@ where
 
     /// Runs the HTTP server.
     async fn run_http_server(&self) -> Result<(), Error> {
-        let handler = self.create_service_handler()?;
+        let index = Arc::new(RwLock::new(I::new(&self.options)?));
+        let storage = Arc::new(RwLock::new(S::new(&self.options)?));
+
+        // create preview generator
+        let ffmpeg = FFMpeg::new(&self.options.ffmpeg).await?;
+        let preview_generator = PreviewGenerator::new(ffmpeg, index.clone(), storage.clone());
+        let preview_requests = preview_generator.get_preview_request_sender();
+
+        // spawn preview generator
+        tokio::spawn(async move {
+            let mut p = preview_generator;
+            p.run().await;
+        });
+
+        // create handler
+        let handler = self
+            .create_service_handler(index.clone(), storage.clone(), preview_requests)
+            .await?;
         let handler = RwLock::new(handler);
         let handler = web::Data::new(handler);
 
@@ -107,19 +127,30 @@ where
             Err(err) => {
                 error!("Running the HTTP server...FAILED");
                 error!("Error: {}", err);
-                Err(err.into())
+                return Err(err.into());
             }
             Ok(_) => {
                 info!("Running the HTTP server...STOPPED");
-                Ok(())
             }
         }
+
+        Ok(())
     }
 
     /// Creates a new instance of the service handler.
-    fn create_service_handler(&self) -> Result<ServiceHandler<I, S>, Error> {
+    ///
+    /// # Arguments
+    /// * `index` - The movies index.
+    /// * `storage` - The movie storage.
+    /// * `preview_requests` - The channel to send preview requests to.
+    async fn create_service_handler(
+        &self,
+        index: Arc<RwLock<I>>,
+        storage: Arc<RwLock<S>>,
+        preview_requests: mpsc::UnboundedSender<ScreenshotRequest>,
+    ) -> Result<ServiceHandler<I, S>, Error> {
         info!("Creating the service handler...");
-        match ServiceHandler::new(self.options.clone()) {
+        match ServiceHandler::new(index, storage, preview_requests).await {
             Err(err) => {
                 error!("Creating the service handler...FAILED");
                 error!("Error: {}", err);
@@ -146,7 +177,7 @@ where
 
         let movie: Movie = movie.into_inner();
 
-        let mut handler = handler.write().await;
+        let handler = handler.read().await;
         handler.handle_add_movie(movie).await
     }
 
@@ -202,7 +233,7 @@ where
 
         let id: MovieId = query.into_inner().id;
 
-        let mut handler = handler.write().await;
+        let handler = handler.read().await;
 
         handler.handle_delete_movie(id).await
     }
@@ -223,7 +254,7 @@ where
 
         let id: MovieId = query.into_inner().id;
 
-        let mut handler = handler.write().await;
+        let handler = handler.read().await;
 
         handler.handle_upload_movie(id, multipart).await
     }
@@ -263,7 +294,7 @@ where
 
         let id: MovieId = query.into_inner().id;
 
-        let mut handler = handler.write().await;
+        let handler = handler.read().await;
 
         handler.handle_upload_screenshot(id, multipart).await
     }

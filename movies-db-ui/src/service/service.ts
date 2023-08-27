@@ -99,6 +99,13 @@ export class Service {
     }
 
     /**
+     * @returns the resource url for the preview of the video with the given id.
+     */
+    public getPreviewUrl(id: MovieId): string {
+        return `${this.endpoint}/movie/screenshot?id=${id}`;
+    }
+
+    /**
      * Submits a video file for the given movie id.
      * 
      * @param id - The id of the movie to submit.

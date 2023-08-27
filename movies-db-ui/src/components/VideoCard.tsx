@@ -22,14 +22,14 @@ export interface VideoCardProps {
 
 export default function VideoCard(props: VideoCardProps): JSX.Element {
     const [movieInfo, setMovieInfo] = React.useState<MovieDetailed | null>(null);
-    const [movieURL, setMovieURL] = React.useState<string | null>(null);
+    const [previewURL, setPreviewURL] = React.useState<string | null>(null);
     // try to load the movie info
     React.useEffect(() => {
         service.getMovie(props.movieId).then((movie) => {
             setMovieInfo(movie);
 
-            if (movie.movie_file_info) {
-                setMovieURL(service.getMovieUrl(props.movieId));
+            if (movie.screenshot_file_info) {
+                setPreviewURL(service.getPreviewUrl(props.movieId));
             }
         });
     }, [props.movieId]);
@@ -68,10 +68,10 @@ export default function VideoCard(props: VideoCardProps): JSX.Element {
                 subheader={movieDate.toLocaleDateString() + ' ' + movieDate.toLocaleTimeString()}
             />
             <CardActionArea onClick={handleOnShow}>
-                {movieURL ? <CardMedia
-                    component="video"
+                {previewURL ? <CardMedia
+                    component="img"
                     height="194"
-                    src={movieURL}
+                    src={previewURL}
                 /> : <CardMedia
                     component="img"
                     height="194"

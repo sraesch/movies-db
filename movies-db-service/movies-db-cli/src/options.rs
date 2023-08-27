@@ -35,12 +35,16 @@ pub struct Options {
     pub log_level: LogLevel,
 
     /// The address to bind the http server to
-    #[arg(short, value_enum, long, default_value = "0.0.0.0:3030")]
+    #[arg(short, long, default_value = "0.0.0.0:3030")]
     pub address: String,
 
     /// The path to the root directory
     #[arg(short, long)]
     pub root_dir: PathBuf,
+
+    /// The path to where ffmpeg and ffprobe are located
+    #[arg(short, long, default_value = "/usr/bin/")]
+    pub ffmpeg: PathBuf,
 }
 
 impl From<Options> for ServiceOptions {
@@ -48,6 +52,7 @@ impl From<Options> for ServiceOptions {
         ServiceOptions {
             root_dir: options.root_dir,
             http_address: options.address.parse().unwrap(),
+            ffmpeg: options.ffmpeg,
         }
     }
 }

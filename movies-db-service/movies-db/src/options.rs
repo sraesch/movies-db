@@ -7,6 +7,9 @@ pub struct Options {
 
     /// The address to bind the HTTP server to.
     pub http_address: SocketAddr,
+
+    /// The path to where ffmpeg and ffprobe are located
+    pub ffmpeg: PathBuf,
 }
 
 impl Default for Options {
@@ -14,6 +17,7 @@ impl Default for Options {
         Self {
             root_dir: PathBuf::from("./"),
             http_address: SocketAddr::from(([127, 0, 0, 1], 3030)),
+            ffmpeg: PathBuf::from("/usr/bin/"),
         }
     }
 }
