@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, sync::Arc};
 
 use actix_cors::Cors;
 use actix_multipart::Multipart;
@@ -43,8 +43,6 @@ where
         let options = options.clone();
         let phantom = PhantomData {};
 
-        // check if ffmpeg and ffprobe exist
-
         Ok(Self { phantom, options })
     }
 
@@ -68,7 +66,12 @@ where
 
     /// Runs the HTTP server.
     async fn run_http_server(&self) -> Result<(), Error> {
-        let handler = self.create_service_handler().await?;
+        let index = Arc::new(RwLock::new(I::new(&self.options)?));
+        let storage = Arc::new(RwLock::new(S::new(&self.options)?));
+
+        let handler = self
+            .create_service_handler(index.clone(), storage.clone())
+            .await?;
         let handler = RwLock::new(handler);
         let handler = web::Data::new(handler);
 
@@ -119,9 +122,17 @@ where
     }
 
     /// Creates a new instance of the service handler.
-    async fn create_service_handler(&self) -> Result<ServiceHandler<I, S>, Error> {
+    ///
+    /// # Arguments
+    /// * `index` - The movies index.
+    /// * `storage` - The movie storage.
+    async fn create_service_handler(
+        &self,
+        index: Arc<RwLock<I>>,
+        storage: Arc<RwLock<S>>,
+    ) -> Result<ServiceHandler<I, S>, Error> {
         info!("Creating the service handler...");
-        match ServiceHandler::new(self.options.clone()).await {
+        match ServiceHandler::new(index, storage).await {
             Err(err) => {
                 error!("Creating the service handler...FAILED");
                 error!("Error: {}", err);
@@ -148,7 +159,7 @@ where
 
         let movie: Movie = movie.into_inner();
 
-        let mut handler = handler.write().await;
+        let handler = handler.read().await;
         handler.handle_add_movie(movie).await
     }
 
@@ -204,7 +215,7 @@ where
 
         let id: MovieId = query.into_inner().id;
 
-        let mut handler = handler.write().await;
+        let handler = handler.read().await;
 
         handler.handle_delete_movie(id).await
     }
@@ -225,7 +236,7 @@ where
 
         let id: MovieId = query.into_inner().id;
 
-        let mut handler = handler.write().await;
+        let handler = handler.read().await;
 
         handler.handle_upload_movie(id, multipart).await
     }
@@ -265,7 +276,7 @@ where
 
         let id: MovieId = query.into_inner().id;
 
-        let mut handler = handler.write().await;
+        let handler = handler.read().await;
 
         handler.handle_upload_screenshot(id, multipart).await
     }

@@ -1,5 +1,5 @@
 use crate::{
-    Error, Movie, MovieDataType, MovieId, MovieSearchQuery, MovieStorage, MoviesIndex, Options,
+    Error, Movie, MovieDataType, MovieId, MovieSearchQuery, MovieStorage, MoviesIndex,
     ReadResource, ScreenshotInfo,
 };
 
@@ -12,20 +12,19 @@ use futures::{StreamExt, TryStreamExt};
 use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::io::AsyncWriteExt;
+use tokio::sync::RwLock;
 
 use tokio_util::io::ReaderStream;
-
-use super::ffmpeg::FFMpeg;
 
 pub struct ServiceHandler<I, S>
 where
     I: MoviesIndex,
     S: MovieStorage,
 {
-    index: I,
-    storage: S,
-    ffmpeg: FFMpeg,
+    index: Arc<RwLock<I>>,
+    storage: Arc<RwLock<S>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -42,26 +41,25 @@ where
     /// Creates a new instance of the service handler.
     ///
     /// # Arguments
-    /// * `options` - The options for the service handler.
-    pub async fn new(options: Options) -> Result<Self, Error> {
-        let index = I::new(&options)?;
-        let storage = S::new(&options)?;
-        let ffmpeg = FFMpeg::new(&options.ffmpeg).await?;
-
-        Ok(Self {
-            index,
-            storage,
-            ffmpeg,
-        })
+    /// * `index` - The movies index.
+    /// * `storage` - The movie storage.
+    pub async fn new(index: Arc<RwLock<I>>, storage: Arc<RwLock<S>>) -> Result<Self, Error> {
+        Ok(Self { index, storage })
     }
 
     /// Handles the request to add a new movie.
     ///
     /// # Arguments
     /// * `movie` - The movie to add.
-    pub async fn handle_add_movie(&mut self, movie: Movie) -> Result<impl Responder> {
-        match self.index.add_movie(movie).await {
-            Ok(movie_id) => match self.storage.allocate_movie_data(movie_id.clone()).await {
+    pub async fn handle_add_movie(&self, movie: Movie) -> Result<impl Responder> {
+        match self.index.write().await.add_movie(movie).await {
+            Ok(movie_id) => match self
+                .storage
+                .read()
+                .await
+                .allocate_movie_data(movie_id.clone())
+                .await
+            {
                 Ok(()) => Ok(movie_id),
                 Err(err) => Self::handle_error(err),
             },
@@ -74,7 +72,7 @@ where
     /// # Arguments
     /// * `movie` - The movie to get.
     pub async fn handle_get_movie(&self, id: MovieId) -> Result<impl Responder> {
-        match self.index.get_movie(&id).await {
+        match self.index.read().await.get_movie(&id).await {
             Ok(movie) => Ok(web::Json(movie)),
             Err(err) => Self::handle_error(err),
         }
@@ -84,9 +82,9 @@ where
     ///
     /// # Arguments
     /// * `movie` - The movie to get.
-    pub async fn handle_delete_movie(&mut self, id: MovieId) -> Result<impl Responder> {
-        match self.index.remove_movie(&id).await {
-            Ok(()) => match self.storage.remove_movie_data(id).await {
+    pub async fn handle_delete_movie(&self, id: MovieId) -> Result<impl Responder> {
+        match self.index.write().await.remove_movie(&id).await {
+            Ok(()) => match self.storage.read().await.remove_movie_data(id).await {
                 Ok(_) => Ok(actix_web::HttpResponse::Ok()),
                 Err(err) => {
                     error!("Error deleting movie: {}", err);
@@ -103,7 +101,7 @@ where
     /// * `id` - The id of the movie to upload.
     /// * `multipart` - The multipart data of the movie.
     pub async fn handle_upload_movie(
-        &mut self,
+        &self,
         id: MovieId,
         mut multipart: Multipart,
     ) -> Result<impl Responder> {
@@ -163,6 +161,8 @@ where
             // open writer for storing movie data
             let mut writer = match self
                 .storage
+                .read()
+                .await
                 .write_movie_data(id.clone(), MovieDataType::MovieData { ext: ext.clone() })
                 .await
             {
@@ -194,6 +194,8 @@ where
             // update the movie file info
             match self
                 .index
+                .write()
+                .await
                 .update_movie_file_info(
                     &id,
                     crate::MovieFileInfo {
@@ -222,7 +224,7 @@ where
     /// * `id` - The id of the movie to upload a screenshot.
     /// * `multipart` - The multipart data of the screenshot.
     pub async fn handle_upload_screenshot(
-        &mut self,
+        &self,
         id: MovieId,
         mut multipart: Multipart,
     ) -> Result<impl Responder> {
@@ -282,6 +284,8 @@ where
             // open writer for storing screenshot data
             let mut writer = match self
                 .storage
+                .read()
+                .await
                 .write_movie_data(
                     id.clone(),
                     MovieDataType::ScreenshotData { ext: ext.clone() },
@@ -316,6 +320,8 @@ where
             // update the movie screenshot info
             match self
                 .index
+                .write()
+                .await
                 .update_screenshot_info(
                     &id,
                     ScreenshotInfo {
@@ -346,7 +352,7 @@ where
         info!("Downloading movie {} ...", id);
 
         // get the movie file info, needed for requesting the movie data
-        let movie_file_info = match self.index.get_movie(&id).await {
+        let movie_file_info = match self.index.read().await.get_movie(&id).await {
             Ok(movie) => match movie.movie_file_info {
                 Some(movie_file_info) => movie_file_info,
                 None => {
@@ -366,6 +372,8 @@ where
         // create reader onto the movie data
         let movie_data = match self
             .storage
+            .read()
+            .await
             .read_movie_data(
                 id,
                 MovieDataType::MovieData {
@@ -399,7 +407,7 @@ where
         info!("Downloading screenshot {} ...", id);
 
         // get the movie screenshot info, needed for requesting the data
-        let screenshot_info = match self.index.get_movie(&id).await {
+        let screenshot_info = match self.index.read().await.get_movie(&id).await {
             Ok(movie) => match movie.screenshot_file_info {
                 Some(screenshot_info) => screenshot_info,
                 None => {
@@ -419,6 +427,8 @@ where
         // create reader onto the screenshot data
         let screenshot_data = match self
             .storage
+            .read()
+            .await
             .read_movie_data(
                 id,
                 MovieDataType::ScreenshotData {
@@ -446,7 +456,7 @@ where
 
     /// Handles the request to show the list of all movies.
     pub async fn handle_search_movies(&self, query: MovieSearchQuery) -> Result<impl Responder> {
-        let movie_ids = match self.index.search_movies(query).await {
+        let movie_ids = match self.index.read().await.search_movies(query).await {
             Ok(movie_ids) => movie_ids,
             Err(err) => {
                 error!("Error searching: {}", err);
@@ -456,7 +466,7 @@ where
 
         let mut movies: Vec<MovieListEntry> = Vec::with_capacity(movie_ids.len());
         for movie_id in movie_ids.iter() {
-            let movie = self.index.get_movie(movie_id).await.unwrap();
+            let movie = self.index.read().await.get_movie(movie_id).await.unwrap();
             movies.push(MovieListEntry {
                 id: movie_id.clone(),
                 title: movie.movie.title,
@@ -466,6 +476,10 @@ where
         Ok(web::Json(movies))
     }
 
+    /// Handles the given error by translating it into an actix-web error response.
+    ///
+    /// # Arguments
+    /// * `err` - The error to handle.
     fn handle_error<T: Responder>(err: Error) -> Result<T> {
         match err {
             Error::InvalidArgument(e) => {

@@ -117,6 +117,14 @@ impl MovieStorage for FileStorage {
 
         Ok(())
     }
+
+    async fn get_file_path(
+        &self,
+        id: MovieId,
+        data_type: MovieDataType,
+    ) -> Result<Option<PathBuf>, Error> {
+        Ok(Some(self.get_file_path(&id, data_type, false).await?))
+    }
 }
 
 impl FileStorage {
