@@ -1,4 +1,4 @@
-mod ffmpeg;
+pub mod ffmpeg;
 mod service_handler;
 mod service_impl;
 
