@@ -2,7 +2,7 @@ use std::{marker::PhantomData, sync::Arc};
 
 use actix_cors::Cors;
 use actix_multipart::Multipart;
-use actix_web::{web, App, HttpServer, Responder, Result};
+use actix_web::{http::header, web, App, HttpServer, Responder, Result};
 
 use log::{debug, error, info, trace};
 use tokio::sync::{mpsc, RwLock};
@@ -266,16 +266,32 @@ where
     /// * `query` - The query parameters.
     async fn handle_download_movie(
         handler: web::Data<RwLock<ServiceHandler<I, S>>>,
+        ranges: web::Header<header::Range>,
         query: web::Query<MovieIdQuery>,
     ) -> Result<impl Responder> {
         debug!("Handling GET /api/v1/movie/file");
         trace!("Request query: {:?}", query);
 
+        let ranges: header::Range = ranges.0;
+
+        let ranges = match ranges {
+            header::Range::Bytes(ranges) => {
+                trace!("Request ranges: {:?}", ranges);
+                ranges
+            }
+            _ => {
+                error!("Invalid range header");
+                return Err(actix_web::error::ErrorRangeNotSatisfiable(
+                    "Invalid range header",
+                ));
+            }
+        };
+
         let id: MovieId = query.into_inner().id;
 
         let handler = handler.read().await;
 
-        handler.handle_download_movie(id).await
+        handler.handle_download_movie(id, &ranges).await
     }
 
     /// Handles the POST /api/v1/movie/screenshot endpoint.

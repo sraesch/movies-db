@@ -5,15 +5,16 @@ use crate::{
 
 use actix_multipart::Multipart;
 use actix_web::body::SizedStream;
-use actix_web::http::header;
+use actix_web::http::header::{self, ByteRangeSpec};
 use actix_web::HttpResponse;
 use actix_web::{web, Responder, Result};
 use futures::{StreamExt, TryStreamExt};
 use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
+use std::io::SeekFrom;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncSeekExt, AsyncWriteExt};
 use tokio::sync::{mpsc, RwLock};
 
 use tokio_util::io::ReaderStream;
@@ -367,7 +368,11 @@ where
     ///
     /// # Arguments
     /// * `id` - The id of the movie to download.
-    pub async fn handle_download_movie(&self, id: MovieId) -> Result<impl Responder> {
+    pub async fn handle_download_movie(
+        &self,
+        id: MovieId,
+        ranges: &[ByteRangeSpec],
+    ) -> Result<impl Responder> {
         info!("Downloading movie {} ...", id);
 
         // get the movie file info, needed for requesting the movie data
@@ -389,7 +394,7 @@ where
         };
 
         // create reader onto the movie data
-        let movie_data = match self
+        let mut movie_data = match self
             .storage
             .read()
             .await
@@ -408,13 +413,38 @@ where
             }
         };
 
-        // create response
-        let length = movie_data.get_size().await as u64;
+        // get total length and create satisfiable range
+        let full_length = movie_data.get_size().await as u64;
+        let range = match ranges.first() {
+            Some(range) => range.to_satisfiable_range(full_length),
+            None => None,
+        };
+
+        let mut response = if range.is_none() {
+            HttpResponse::Ok()
+        } else {
+            HttpResponse::PartialContent()
+        };
+
+        let mut length = full_length;
+        if let Some(r) = range {
+            debug!("Seek to new range: {:?}", r);
+            movie_data.seek(SeekFrom::Start(r.0)).await?;
+            debug_assert_eq!(movie_data.stream_position().await?, r.0);
+            length = r.1 - r.0 + 1;
+
+            response.append_header((
+                header::CONTENT_RANGE,
+                format!("bytes {}-{}/{}", r.0, r.1, full_length),
+            ));
+        }
+
         let reader_stream = ReaderStream::new(movie_data);
         let sized_stream = SizedStream::new(length, reader_stream);
 
-        HttpResponse::Ok()
+        response
             .content_type(movie_file_info.mime_type)
+            .append_header((header::ACCEPT_RANGES, "bytes"))
             .message_body(sized_stream)
     }
 

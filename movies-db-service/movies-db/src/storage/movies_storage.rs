@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use tokio::io::{AsyncRead, AsyncWrite};
+use tokio::io::{AsyncRead, AsyncSeek, AsyncWrite};
 
 use crate::{Error, MovieId, Options};
 
@@ -20,7 +20,7 @@ pub enum MovieDataType {
 
 /// The trait for reading movie data.
 #[async_trait]
-pub trait ReadResource: AsyncRead + Unpin + 'static {
+pub trait ReadResource: AsyncRead + AsyncSeek + Unpin + 'static {
     async fn get_size(&self) -> usize;
 }
 
