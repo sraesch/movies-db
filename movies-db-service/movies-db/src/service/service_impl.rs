@@ -74,8 +74,8 @@ where
 
         // create preview generator
         let ffmpeg = FFMpeg::new(&self.options.ffmpeg).await?;
-        let (preview_generator, preview_requests) =
-            PreviewGenerator::new(ffmpeg, index.clone(), storage.clone());
+        let preview_generator = PreviewGenerator::new(ffmpeg, index.clone(), storage.clone());
+        let preview_requests = preview_generator.get_preview_request_sender();
 
         // spawn preview generator
         tokio::spawn(async move {
