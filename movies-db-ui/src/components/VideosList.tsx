@@ -58,7 +58,7 @@ export default function VideosList(): JSX.Element {
 
     return (<Paper style={{
         display: 'flex',
-        flexDirection: 'row',
+        flexDirection: 'column',
         flexWrap: 'wrap',
         justifyContent: 'flex-start',
         alignItems: 'flex-start',
