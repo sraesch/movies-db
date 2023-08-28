@@ -5,8 +5,8 @@ metadata:
   labels:
     app: movies-db-service
 spec:
-{{- if .Values.storageClass }}
-  storageClassName: {{ .Values.storageClass }}
+{{- if .Values.backend.storageClass }}
+  storageClassName: {{ .Values.backend.storageClass }}
 {{- end }}
   selector:
     matchLabels:
