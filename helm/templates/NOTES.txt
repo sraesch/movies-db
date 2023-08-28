@@ -1,1 +1,2 @@
-Welcome to movies-db
+Welcome to movies-db.
+Service is available under port {{ Values.entryNodePort }}

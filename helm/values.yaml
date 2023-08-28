@@ -1,5 +1,4 @@
-# Optionally, provide the registry for pulling the images. By default the docker hub registry is being used.
-
+# Provide the registry for pulling the images. By default the docker hub registry is being used.
 registry: ghcr.io
 
 # The tag for the images. By default the latest tag is being used.
@@ -18,7 +17,12 @@ backend:
   # The storage size for the movies
   storage: 100Gi
 
-  storage_class: ReadWriteMany
+  # Optionally, specify the storage class to use
+  # storageClass:
+
+  # The access mode of the storage. As currently, only one replica is being used,
+  # ReadWriteOnce is sufficient.
+  accessMode: ReadWriteMany
 
   # The log level for the backend service
   log_level: info

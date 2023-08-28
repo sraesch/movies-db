@@ -5,11 +5,14 @@ metadata:
   labels:
     app: movies-db-service
 spec:
+{{- if .Values.storageClass }}
+  storageClassName: {{ .Values.storageClass }}
+{{- end }}
   selector:
     matchLabels:
       app: movies-db-service
   accessModes:
-    - {{ .Values.backend.storage_class }}
+    - {{ .Values.backend.accessMode }}
   resources:
     requests:
       storage: {{ .Values.backend.storage }}
