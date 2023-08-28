@@ -1,10 +1,13 @@
-# Optionally, provide the registry for pulling the images. By default the docker hub registry is being used. 
+# Optionally, provide the registry for pulling the images. By default the docker hub registry is being used.
 
-# registry:
+registry: ghcr.io
+
+# The tag for the images. By default the latest tag is being used.
+tag: 0.1.0
 
 imagePullPolicy: Always
 
-# Use a DockerPullSecret 
+# Use a DockerPullSecret
 imagePullSecret:
 
 # The externally exposed (Node-)port.
@@ -19,7 +22,6 @@ backend:
 
   # The log level for the backend service
   log_level: info
-
 
 # Set the number of pods to be deployed for delivering the UI application.
 numUIPods: 1

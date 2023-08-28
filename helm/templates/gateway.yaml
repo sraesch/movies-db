@@ -20,7 +20,7 @@ spec:
 {{- end }}
       containers:
         - name: movies-db-gateway
-          image: {{if .Values.registry }}{{ .Values.registry }}/{{ end }}srserver01/movies-db-gateway
+          image: {{if .Values.registry }}{{ .Values.registry }}/{{ end }}sraesch/movies-db-gateway:{{ .Values.tag }}
           imagePullPolicy: {{ .Values.imagePullPolicy }}
           ports:
             - containerPort: 80
