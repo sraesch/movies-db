@@ -84,9 +84,9 @@ export default function VideoCard(props: VideoCardProps): JSX.Element {
                     </Typography>
                 </CardContent>
             </CardActionArea>
-            <CardActions disableSpacing>
+            <CardActions >
                 {movie.tags ? movie.tags.map((tag, index) => {
-                    return <Chip key={index} label={tag} />
+                    return <Chip key={index} size="small" label={tag} />
                 }) : <div></div>}
             </CardActions>
 
