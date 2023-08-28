@@ -1,13 +1,15 @@
-import { Paper } from '@mui/material';
+import { Box, Paper } from '@mui/material';
 import * as React from 'react';
 import VideoCard from './VideoCard';
 import { service } from '../service/service';
 import { MovieId } from '../service/types';
 import YesNoDialog from './YesNoDialog';
 import VideoPlayer from './VideoPlayer';
+import VideoListFilter from './VideoListFilters';
 
 export default function VideosList(): JSX.Element {
     const [movieIds, setMovieIds] = React.useState<string[]>([]);
+    const [tagList, setTagList] = React.useState<[string, number][]>([]);
     const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
     const [movieToDelete, setMovieToDelete] = React.useState<MovieId | null>(null);
     const [movieToPlay, setMovieToPlay] = React.useState<MovieId | null>(null);
@@ -18,6 +20,8 @@ export default function VideosList(): JSX.Element {
         const movieIds = movies.map((movie) => {
             return movie.id;
         });
+
+        setTagList(await service.getTags());
 
         setMovieIds(movieIds);
     };
@@ -48,6 +52,10 @@ export default function VideosList(): JSX.Element {
         setMovieToPlay(movieId);
     };
 
+    const handleChangeTags = (tags: string[]) => {
+        service.setSearchTags(tags);
+    };
+
     return (<Paper style={{
         display: 'flex',
         flexDirection: 'row',
@@ -62,16 +70,25 @@ export default function VideosList(): JSX.Element {
             open={deleteDialogOpen}
             onClose={() => setDeleteDialogOpen(false)}
             onAccept={() => handleOnDelete2()} />
-        {movieToPlay ? <VideoPlayer open={movieToPlay !== null} movieId={movieToPlay} onClose={() => setMovieToPlay(null)} /> : <></>}
-        {
-            movieIds.map((movieId) => {
-                return (<div key={movieId} style={{
-                    margin: '16px',
-                }}>
-                    <VideoCard movieId={movieId} onDelete={() => handleOnDelete1(movieId)} onShow={() => handleOnShow(movieId)} />
-                </div>);
-            })
-        }
-
+        <VideoListFilter tagList={tagList} onChangeTags={handleChangeTags} />
+        <Box sx={{
+            display: 'flex',
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            justifyContent: 'flex-start',
+            alignItems: 'flex-start',
+            flexGrow: 1,
+        }}>
+            {movieToPlay ? <VideoPlayer open={movieToPlay !== null} movieId={movieToPlay} onClose={() => setMovieToPlay(null)} /> : <></>}
+            {
+                movieIds.map((movieId) => {
+                    return (<div key={movieId} style={{
+                        margin: '16px',
+                    }}>
+                        <VideoCard movieId={movieId} onDelete={() => handleOnDelete1(movieId)} onShow={() => handleOnShow(movieId)} />
+                    </div>);
+                })
+            }
+        </Box>
     </Paper >)
 }

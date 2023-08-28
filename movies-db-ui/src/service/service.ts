@@ -58,6 +58,23 @@ export class Service {
     }
 
     /**
+     * Returns a list of all tags sorted by the number of movies they are assigned to.
+     *
+     * @returns list of tags.
+     */
+    public async getTags(): Promise<[string, number][]> {
+        const response = await fetch(`${this.endpoint}/movie/tags`);
+
+        if (!response.ok) {
+            throw new Error("Failed to get tags");
+        }
+
+        const tags = await response.json() as [string, number][];
+
+        return tags;
+    }
+
+    /**
      * Deletes the movie with the given id.
      * 
      * @param id - The id of the movie to delete.
@@ -93,6 +110,11 @@ export class Service {
         }
         if (query.num_results !== undefined) {
             queryString = queryString.concat(`&num_results=${query.num_results}`);
+        }
+        if (query.tags !== undefined) {
+            query.tags.map((tag, index) => {
+                queryString = queryString.concat(`&tags[${index}]=${tag}`);
+            });
         }
 
         const response = await fetch(`${this.endpoint}/movie/search?${queryString}`, {
@@ -156,6 +178,21 @@ export class Service {
             }
 
             this.query.title = searchString;
+        }
+
+        this.notifyVideoListUpdate();
+    }
+
+    /**
+     * Sets the tags to search for.
+     * 
+     * @param tags - The tags to search for.
+     */
+    public setSearchTags(tags: string[]): void {
+        if (tags.length === 0) {
+            this.query.tags = undefined;
+        } else {
+            this.query.tags = tags;
         }
 
         this.notifyVideoListUpdate();
