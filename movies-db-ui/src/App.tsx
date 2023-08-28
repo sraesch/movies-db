@@ -9,6 +9,7 @@ import VideosList from './components/VideosList';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import packageJson from '../package.json';
 import AddIcon from '@mui/icons-material/Add';
+import Search from './components/Search';
 
 const theme = createTheme({
   palette: {
@@ -47,27 +48,33 @@ function App() {
             <Box sx={{ flexGrow: 1 }}>
               <AppBar position="static">
                 <Toolbar sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Button color="primary" variant='contained' onClick={() => setVideoDialogOpen(true)} startIcon={<AddIcon />}>Add Video</Button>
-                  <Typography
-                    variant="h6"
-                    noWrap
-                    component="a"
-                    href="/"
-                    sx={{
-                      mr: 2,
-                      display: { xs: 'none', md: 'flex' },
-                      fontFamily: 'monospace',
-                      fontWeight: 700,
-                      letterSpacing: '.2rem',
-                      color: 'inherit',
-                      textDecoration: 'none',
-                    }}
-                  >
-                    Movie DB
-                  </Typography>
-                  <Typography variant='body2' color='gray'>
-                    {packageJson.version}
-                  </Typography>
+                  <Box sx={{ flexGrow: 1 }}>
+                    <Typography
+                      variant="h6"
+                      noWrap
+                      component="a"
+                      href="/"
+                      sx={{
+                        mr: 2,
+                        display: { xs: 'none', md: 'flex' },
+                        fontFamily: 'monospace',
+                        fontWeight: 700,
+                        letterSpacing: '.2rem',
+                        color: 'inherit',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      Movie DB
+                    </Typography>
+                  </Box>
+                  <Box sx={{ flexGrow: 2 }}>
+                    <Search onSearch={s => service.setSearchString(s)} />
+                  </Box>
+                  <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'flex-end' }}>
+                    <Button color="primary" variant='contained' onClick={() => setVideoDialogOpen(true)} startIcon={<AddIcon />}>
+                      Add Video
+                    </Button>
+                  </Box>
                 </Toolbar>
               </AppBar>
             </Box>

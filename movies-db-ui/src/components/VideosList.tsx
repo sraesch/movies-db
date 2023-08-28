@@ -2,7 +2,7 @@ import { Paper } from '@mui/material';
 import * as React from 'react';
 import VideoCard from './VideoCard';
 import { service } from '../service/service';
-import { MovieId, MovieSearchQuery, SortingField, SortingOrder } from '../service/types';
+import { MovieId } from '../service/types';
 import YesNoDialog from './YesNoDialog';
 import VideoPlayer from './VideoPlayer';
 
@@ -14,12 +14,7 @@ export default function VideosList(): JSX.Element {
 
     // update list of movies
     const updateList = async () => {
-        const query: MovieSearchQuery = {
-            sorting_field: SortingField.Date,
-            sorting_order: SortingOrder.Descending,
-        }
-
-        const movies = await service.searchMovies(query);
+        const movies = await service.searchMovies();
         const movieIds = movies.map((movie) => {
             return movie.id;
         });
@@ -30,6 +25,8 @@ export default function VideosList(): JSX.Element {
     // get list of movies
     React.useEffect(() => {
         updateList();
+
+        service.registerVideoListUpdate(updateList);
     }, []);
 
     const handleOnDelete1 = (movieId: MovieId) => {
@@ -44,7 +41,6 @@ export default function VideosList(): JSX.Element {
         }
 
         await service.removeMovie(movieToDelete);
-        await updateList();
     };
 
     const handleOnShow = (movieId: MovieId) => {
