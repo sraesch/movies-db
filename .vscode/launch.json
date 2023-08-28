@@ -5,6 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Debug movies-db-ui",
+            "request": "launch",
+            "type": "chrome",
+            "url": "http://localhost:3000",
+            "webRoot": "${workspaceFolder}/movies-db-ui",
+        },
+        {
             "type": "lldb",
             "request": "launch",
             "name": "Debug movies-db-cli",
