@@ -104,6 +104,7 @@ where
                 .route("/movie", web::get().to(Self::handle_get_movie))
                 .route("/movie", web::delete().to(Self::handle_delete_movie))
                 .route("/movie/search", web::get().to(Self::handle_search_movie))
+                .route("/movie/tags", web::get().to(Self::handle_get_tags))
                 .route("/movie/file", web::post().to(Self::handle_upload_movie))
                 .route("/movie/file", web::get().to(Self::handle_download_movie))
                 .route(
@@ -198,6 +199,20 @@ where
         let handler = handler.read().await;
 
         handler.handle_search_movies(query).await
+    }
+
+    /// Handles the GET /api/v1/tags endpoint.
+    ///
+    /// # Arguments
+    /// * `handler` - The service handler.
+    async fn handle_get_tags(
+        handler: web::Data<RwLock<ServiceHandler<I, S>>>,
+    ) -> Result<impl Responder> {
+        debug!("Handling GET /api/v1/movie/tags");
+
+        let handler = handler.read().await;
+
+        handler.handle_get_tags().await
     }
 
     /// Handles the GET /api/v1/movie endpoint.

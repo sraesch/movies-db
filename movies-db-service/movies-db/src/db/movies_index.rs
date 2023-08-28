@@ -165,6 +165,9 @@ pub trait MoviesIndex: Send + Sync {
     /// # Arguments
     /// `query` - The query to search for.
     async fn search_movies(&self, query: MovieSearchQuery) -> Result<Vec<MovieId>, Error>;
+
+    /// Returns a list of all tags with the number of movies associated with each tag.
+    async fn get_tag_list_with_count(&self) -> Result<Vec<(String, usize)>, Error>;
 }
 
 #[cfg(test)]

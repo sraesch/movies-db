@@ -411,6 +411,28 @@ impl MoviesIndex for SqliteMoviesIndex {
     async fn search_movies(&self, query: MovieSearchQuery) -> Result<Vec<MovieId>, Error> {
         self.search_movies_impl(query).await
     }
+
+    async fn get_tag_list_with_count(&self) -> Result<Vec<(String, usize)>, Error> {
+        let connection = self.connection.lock().await;
+
+        let mut stmt = connection.prepare(
+            "SELECT tag, COUNT(*) FROM tags GROUP BY tag ORDER BY COUNT(*) DESC, tag ASC",
+        )?;
+
+        let rows = stmt.query_map([], |row| {
+            let tag: String = row.get(0)?;
+            let count: usize = row.get(1)?;
+
+            Ok((tag, count))
+        })?;
+
+        let mut tags: Vec<(String, usize)> = Vec::new();
+        for row in rows {
+            tags.push(row?);
+        }
+
+        Ok(tags)
+    }
 }
 
 #[cfg(test)]
