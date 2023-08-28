@@ -5,6 +5,7 @@ use actix_multipart::Multipart;
 use actix_web::{http::header, web, App, HttpServer, Responder, Result};
 
 use log::{debug, error, info, trace};
+use serde_qs::actix::QsQuery;
 use tokio::sync::{mpsc, RwLock};
 
 use crate::{
@@ -189,7 +190,7 @@ where
     /// * `query` - The query parameters.
     async fn handle_search_movie(
         handler: web::Data<RwLock<ServiceHandler<I, S>>>,
-        query: web::Query<MovieSearchQuery>,
+        query: QsQuery<MovieSearchQuery>,
     ) -> Result<impl Responder> {
         debug!("Handling GET /api/v1/movie/search");
         trace!("Request query: {:?}", query);
