@@ -1,12 +1,14 @@
 import * as React from 'react';
 import './App.css';
 import AddVideoDialog from './components/AddVideoDialog';
-import { AppBar, Box, Button, Toolbar } from '@mui/material';
+import { AppBar, Box, Button, Toolbar, Typography } from '@mui/material';
 import { MovieSubmit } from './service/types';
 import { service } from './service/service';
 import LoadingDialog, { LoadingDialogProps } from './components/LoadingDialog';
 import VideosList from './components/VideosList';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
+import packageJson from '../package.json';
+import AddIcon from '@mui/icons-material/Add';
 
 const theme = createTheme({
   palette: {
@@ -44,8 +46,28 @@ function App() {
           <div>
             <Box sx={{ flexGrow: 1 }}>
               <AppBar position="static">
-                <Toolbar>
-                  <Button color="primary" onClick={() => setVideoDialogOpen(true)}>Add Video</Button>
+                <Toolbar sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Button color="primary" variant='contained' onClick={() => setVideoDialogOpen(true)} startIcon={<AddIcon />}>Add Video</Button>
+                  <Typography
+                    variant="h6"
+                    noWrap
+                    component="a"
+                    href="/"
+                    sx={{
+                      mr: 2,
+                      display: { xs: 'none', md: 'flex' },
+                      fontFamily: 'monospace',
+                      fontWeight: 700,
+                      letterSpacing: '.2rem',
+                      color: 'inherit',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    Movie DB
+                  </Typography>
+                  <Typography variant='body2' color='gray'>
+                    {packageJson.version}
+                  </Typography>
                 </Toolbar>
               </AppBar>
             </Box>
