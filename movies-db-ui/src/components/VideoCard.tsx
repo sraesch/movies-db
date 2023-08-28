@@ -57,7 +57,7 @@ export default function VideoCard(props: VideoCardProps): JSX.Element {
     };
 
     return (
-        <Card elevation={3} sx={{ maxWidth: 345 }}>
+        <Card elevation={3} sx={{ width: 345, height: 448 }}>
             <CardHeader
                 action={
                     <IconButton aria-label="settings" onClick={handleOnDelete}>
