@@ -49,43 +49,36 @@ export default function VideoListFilter(props: VideoListFilterProps) {
         }
 
         const index = tags.indexOf(tagName);
-        if (index === -1) {
-            setTags([...tags, tagName]);
-        } else {
-            setTags(tags.filter((_, i) => i !== index));
+        const newTags: string[] = (index === -1) ? [...tags, tagName] : tags.filter((_, i) => i !== index);
+        setTags(newTags);
+
+        if (props.onChangeTags) {
+            props.onChangeTags(newTags);
         }
     };
 
-    React.useEffect(() => {
-        if (props.onChangeTags) {
-            props.onChangeTags(tags);
+    const handleSorting = (option: SortingOption) => {
+        setSortingOption(option);
+
+        if (!props.onChangeSorting) {
+            return;
         }
-    }, [tags, props]);
 
-    React.useEffect(() => {
-        const handleSorting = (option: SortingOption) => {
-            if (!props.onChangeSorting) {
-                return;
-            }
-
-            switch (option) {
-                case SortingOption.DateAscending:
-                    props.onChangeSorting(SortingField.Date, SortingOrder.Ascending);
-                    break;
-                case SortingOption.DateDescending:
-                    props.onChangeSorting(SortingField.Date, SortingOrder.Descending);
-                    break;
-                case SortingOption.TitleAscending:
-                    props.onChangeSorting(SortingField.Title, SortingOrder.Ascending);
-                    break;
-                case SortingOption.TitleDescending:
-                    props.onChangeSorting(SortingField.Title, SortingOrder.Descending);
-                    break;
-            }
-        };
-
-        handleSorting(sortingOption);
-    }, [sortingOption, props]);
+        switch (option) {
+            case SortingOption.DateAscending:
+                props.onChangeSorting(SortingField.Date, SortingOrder.Ascending);
+                break;
+            case SortingOption.DateDescending:
+                props.onChangeSorting(SortingField.Date, SortingOrder.Descending);
+                break;
+            case SortingOption.TitleAscending:
+                props.onChangeSorting(SortingField.Title, SortingOrder.Ascending);
+                break;
+            case SortingOption.TitleDescending:
+                props.onChangeSorting(SortingField.Title, SortingOrder.Descending);
+                break;
+        }
+    };
 
     const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorEl(event.currentTarget);
@@ -133,7 +126,7 @@ export default function VideoListFilter(props: VideoListFilterProps) {
                 onClose={handleClose}>
                 {menuOptions.map(option => {
                     return (<MenuItem key={option.value} onClick={() => {
-                        setSortingOption(option.value);
+                        handleSorting(option.value);
                         handleClose();
                     }}>
                         {option.value === sortingOption ? <ListItemIcon><Check fontSize="small" /></ListItemIcon> : <></>}
