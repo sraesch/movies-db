@@ -112,7 +112,7 @@ export class Service {
             queryString = queryString.concat(`&num_results=${query.num_results}`);
         }
         if (query.tags !== undefined) {
-            query.tags.map((tag, index) => {
+            query.tags.forEach((tag, index) => {
                 queryString = queryString.concat(`&tags[${index}]=${tag}`);
             });
         }

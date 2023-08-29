@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Box, Chip, Paper } from '@mui/material';
+import { Box, Chip } from '@mui/material';
 
 export interface VideoListFilterProps {
     tagList: [string, number][];
@@ -27,7 +27,7 @@ export default function VideoListFilter(props: VideoListFilterProps) {
         if (props.onChangeTags) {
             props.onChangeTags(tags);
         }
-    }, [tags]);
+    }, [tags, props.onChangeTags]);
 
     return (
         <Box sx={{

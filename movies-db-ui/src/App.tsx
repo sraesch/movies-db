@@ -7,7 +7,6 @@ import { service } from './service/service';
 import LoadingDialog, { LoadingDialogProps } from './components/LoadingDialog';
 import VideosList from './components/VideosList';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import packageJson from '../package.json';
 import AddIcon from '@mui/icons-material/Add';
 import Search from './components/Search';
 
