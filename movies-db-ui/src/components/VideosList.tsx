@@ -71,13 +71,15 @@ export default function VideosList(): JSX.Element {
             onClose={() => setDeleteDialogOpen(false)}
             onAccept={() => handleOnDelete2()} />
         <VideoListFilter tagList={tagList} onChangeTags={handleChangeTags} />
-        <Box sx={{
+        <Box className='scrollButNoScrollbar' sx={{
             display: 'flex',
             flexDirection: 'row',
             flexWrap: 'wrap',
             justifyContent: 'flex-start',
             alignItems: 'flex-start',
             flexGrow: 1,
+            overflowY: 'scroll',
+            maxHeight: 'calc(100vh - 64px - 48px - 48px)',
         }}>
             {movieToPlay ? <VideoPlayer open={movieToPlay !== null} movieId={movieToPlay} onClose={() => setMovieToPlay(null)} /> : <></>}
             {
