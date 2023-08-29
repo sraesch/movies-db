@@ -15,7 +15,7 @@ export class Service {
         this.query = {
             sorting_field: SortingField.Date,
             sorting_order: SortingOrder.Descending,
-            num_results: 50,
+            num_results: undefined,
             start_index: 0,
         };
     }
