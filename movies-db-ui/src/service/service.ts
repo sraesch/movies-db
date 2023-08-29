@@ -199,6 +199,19 @@ export class Service {
     }
 
     /**
+     * Sets the sorting field and order.
+     * 
+     * @param field - The field to sort by.
+     * @param order - The order to sort in.
+     */
+    public setSorting(field: SortingField, order: SortingOrder): void {
+        this.query.sorting_field = field;
+        this.query.sorting_order = order;
+
+        this.notifyVideoListUpdate();
+    }
+
+    /**
      * Submits a video file for the given movie id.
      * 
      * @param id - The id of the movie to submit.

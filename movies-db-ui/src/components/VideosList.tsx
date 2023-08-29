@@ -2,7 +2,7 @@ import { Box, Paper } from '@mui/material';
 import * as React from 'react';
 import VideoCard from './VideoCard';
 import { service } from '../service/service';
-import { MovieId } from '../service/types';
+import { MovieId, SortingField, SortingOrder } from '../service/types';
 import YesNoDialog from './YesNoDialog';
 import VideoPlayer from './VideoPlayer';
 import VideoListFilter from './VideoListFilters';
@@ -56,6 +56,10 @@ export default function VideosList(): JSX.Element {
         service.setSearchTags(tags);
     };
 
+    const handleChangeSorting = (sorting_field: SortingField, sorting_order: SortingOrder) => {
+        service.setSorting(sorting_field, sorting_order);
+    };
+
     return (<Paper style={{
         display: 'flex',
         flexDirection: 'column',
@@ -70,7 +74,7 @@ export default function VideosList(): JSX.Element {
             open={deleteDialogOpen}
             onClose={() => setDeleteDialogOpen(false)}
             onAccept={() => handleOnDelete2()} />
-        <VideoListFilter tagList={tagList} onChangeTags={handleChangeTags} />
+        <VideoListFilter tagList={tagList} onChangeTags={handleChangeTags} onChangeSorting={handleChangeSorting} />
         <Box className='scrollButNoScrollbar' sx={{
             display: 'flex',
             flexDirection: 'row',
