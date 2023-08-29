@@ -169,11 +169,15 @@ impl SqliteMoviesIndex {
         // limit
         if let Some(limit) = query.num_results {
             order_and_limit.push_str(&format!(" LIMIT {} ", limit));
+        } else {
+            order_and_limit.push_str(" LIMIT -1 ");
         }
 
         // offset
         if let Some(offset) = query.start_index {
             order_and_limit.push_str(&format!(" OFFSET {} ", offset));
+        } else {
+            order_and_limit.push_str(" OFFSET 0 ");
         }
 
         order_and_limit
