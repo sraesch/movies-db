@@ -185,6 +185,24 @@ impl MoviesIndex for SimpleMoviesIndex {
 
         Ok(movie_ids)
     }
+
+    async fn get_tag_list_with_count(&self) -> Result<Vec<(String, usize)>, Error> {
+        info!("Getting tag list with count");
+
+        let mut tag_map: HashMap<String, usize> = HashMap::new();
+
+        for movie in self.movies.values() {
+            for tag in movie.movie.tags.iter() {
+                let count = tag_map.entry(tag.clone()).or_insert(0);
+                *count += 1;
+            }
+        }
+
+        let mut tag_list: Vec<(String, usize)> = tag_map.into_iter().collect();
+        tag_list.sort_unstable_by(|(_, lhs), (_, rhs)| rhs.cmp(lhs));
+
+        Ok(tag_list)
+    }
 }
 
 impl SimpleMoviesIndex {

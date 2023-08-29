@@ -20,6 +20,7 @@ serde_json = "1.0"
 async-trait = "0.1"
 actix-cors = "0.6"
 rusqlite = { version = "0.29", features = ["bundled"] }
+serde_qs = { version = "0.12", features = ["actix4"]}
 
 [dev-dependencies]
 tempdir = "0.3"

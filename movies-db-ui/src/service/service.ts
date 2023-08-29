@@ -1,12 +1,22 @@
-import { MovieDetailed, MovieId, MovieSearchQuery, MovieSearchResult, MovieSubmit } from "./types";
+import { MovieDetailed, MovieId, MovieSearchQuery, MovieSearchResult, MovieSubmit, SortingField, SortingOrder } from "./types";
 
 export type ProgressUpdate = (progress: number, done: boolean) => void;
 
+export type VideoListUpdate = () => void;
+
 export class Service {
     private endpoint: string;
+    private query: MovieSearchQuery;
+    private videoListUpdate: Set<VideoListUpdate> = new Set<VideoListUpdate>();
 
     constructor(endpoint: string) {
         this.endpoint = endpoint;
+        this.query = {
+            sorting_field: SortingField.Date,
+            sorting_order: SortingOrder.Descending,
+            num_results: undefined,
+            start_index: 0,
+        };
     }
 
     /**
@@ -21,6 +31,8 @@ export class Service {
     public async submitMovie(movie: MovieSubmit, file: File, progressUpdate?: ProgressUpdate): Promise<MovieId> {
         const id = await this.submitMovieInfo(movie);
         await this.submitMovieFile(id, file, progressUpdate);
+
+        this.notifyVideoListUpdate();
 
         return id;
     }
@@ -45,6 +57,23 @@ export class Service {
     }
 
     /**
+     * Returns a list of all tags sorted by the number of movies they are assigned to.
+     *
+     * @returns list of tags.
+     */
+    public async getTags(): Promise<[string, number][]> {
+        const response = await fetch(`${this.endpoint}/movie/tags`);
+
+        if (!response.ok) {
+            throw new Error("Failed to get tags");
+        }
+
+        const tags = await response.json() as [string, number][];
+
+        return tags;
+    }
+
+    /**
      * Deletes the movie with the given id.
      * 
      * @param id - The id of the movie to delete.
@@ -57,6 +86,8 @@ export class Service {
         if (!response.ok) {
             throw new Error("Failed to remove movie");
         }
+
+        this.notifyVideoListUpdate();
     }
 
     /**
@@ -66,16 +97,23 @@ export class Service {
      * 
      * @returns a list of movie ids with title matching the given query in the given order.
      **/
-    public async searchMovies(query: MovieSearchQuery): Promise<MovieSearchResult> {
-        const queryString = `sorting_order=${query.sorting_order}&sorting_field=${query.sorting_field}`;
-        if (query.title) {
-            queryString.concat(`&title=${query.title}`);
+    public async searchMovies(): Promise<MovieSearchResult> {
+        const query = this.query;
+
+        let queryString = `sorting_order=${query.sorting_order}&sorting_field=${query.sorting_field}`;
+        if (query.title !== undefined) {
+            queryString = queryString.concat(`&title=${query.title}`);
         }
-        if (query.start_index) {
-            queryString.concat(`&start_index=${query.start_index}`);
+        if (query.start_index !== undefined) {
+            queryString = queryString.concat(`&start_index=${query.start_index}`);
         }
-        if (query.num_results) {
-            queryString.concat(`&num_results=${query.num_results}`);
+        if (query.num_results !== undefined) {
+            queryString = queryString.concat(`&num_results=${query.num_results}`);
+        }
+        if (query.tags !== undefined) {
+            query.tags.forEach((tag, index) => {
+                queryString = queryString.concat(`&tags[${index}]=${tag}`);
+            });
         }
 
         const response = await fetch(`${this.endpoint}/movie/search?${queryString}`, {
@@ -103,6 +141,73 @@ export class Service {
      */
     public getPreviewUrl(id: MovieId): string {
         return `${this.endpoint}/movie/screenshot?id=${id}`;
+    }
+
+    /**
+     * Registers a callback to be called when the video list has been updated.
+     * 
+     * @param update - The callback to register.
+     */
+    public registerVideoListUpdate(update: VideoListUpdate): void {
+        this.videoListUpdate.add(update);
+    }
+
+    /**
+     * Sets the string to search for.
+     * 
+     * @param searchString - The string to search for.
+     */
+    public setSearchString(searchString: string): void {
+        if (searchString.length === 0) {
+            this.query.title = undefined;
+            this.notifyVideoListUpdate();
+            return;
+        }
+
+        if (searchString.startsWith("\"") && searchString.endsWith("\"")) {
+            searchString = searchString.substring(1, searchString.length - 1);
+            this.query.title = searchString;
+        } else {
+            if (!searchString.startsWith("*")) {
+                searchString = "*" + searchString;
+            }
+
+            if (!searchString.endsWith("*")) {
+                searchString = searchString + "*";
+            }
+
+            this.query.title = searchString;
+        }
+
+        this.notifyVideoListUpdate();
+    }
+
+    /**
+     * Sets the tags to search for.
+     * 
+     * @param tags - The tags to search for.
+     */
+    public setSearchTags(tags: string[]): void {
+        if (tags.length === 0) {
+            this.query.tags = undefined;
+        } else {
+            this.query.tags = tags;
+        }
+
+        this.notifyVideoListUpdate();
+    }
+
+    /**
+     * Sets the sorting field and order.
+     * 
+     * @param field - The field to sort by.
+     * @param order - The order to sort in.
+     */
+    public setSorting(field: SortingField, order: SortingOrder): void {
+        this.query.sorting_field = field;
+        this.query.sorting_order = order;
+
+        this.notifyVideoListUpdate();
     }
 
     /**
@@ -175,6 +280,15 @@ export class Service {
         const id = await response.text();
 
         return id;
+    }
+
+    /**
+     * Notifies all registered listeners that the video list has been updated.
+     */
+    private notifyVideoListUpdate(): void {
+        this.videoListUpdate.forEach((update) => {
+            update();
+        });
     }
 }
 

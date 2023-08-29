@@ -57,7 +57,7 @@ export default function VideoPlayer(props: VideoPlayerProps) {
                 }}>
                     <video controls src={movieURL} style={{
                         marginTop: '16px',
-                        width: '50%'
+                        height: '50vh',
                     }} />
                     <div style={{
                         marginTop: '16px',

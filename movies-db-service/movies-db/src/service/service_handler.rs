@@ -504,6 +504,9 @@ where
     }
 
     /// Handles the request to show the list of all movies.
+    ///
+    /// # Arguments
+    /// * `query` - The query to search for.
     pub async fn handle_search_movies(&self, query: MovieSearchQuery) -> Result<impl Responder> {
         let movie_ids = match self.index.read().await.search_movies(query).await {
             Ok(movie_ids) => movie_ids,
@@ -523,6 +526,20 @@ where
         }
 
         Ok(web::Json(movies))
+    }
+
+    /// Handles the request to get a list of all tags with the number of movies associated with
+    /// each tag.
+    pub async fn handle_get_tags(&self) -> Result<impl Responder> {
+        let tags = match self.index.read().await.get_tag_list_with_count().await {
+            Ok(tags) => tags,
+            Err(err) => {
+                error!("Error getting tags: {}", err);
+                return Self::handle_error(err);
+            }
+        };
+
+        Ok(web::Json(tags))
     }
 
     /// Handles the given error by translating it into an actix-web error response.

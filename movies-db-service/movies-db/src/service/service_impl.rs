@@ -5,6 +5,7 @@ use actix_multipart::Multipart;
 use actix_web::{http::header, web, App, HttpServer, Responder, Result};
 
 use log::{debug, error, info, trace};
+use serde_qs::actix::QsQuery;
 use tokio::sync::{mpsc, RwLock};
 
 use crate::{
@@ -104,6 +105,7 @@ where
                 .route("/movie", web::get().to(Self::handle_get_movie))
                 .route("/movie", web::delete().to(Self::handle_delete_movie))
                 .route("/movie/search", web::get().to(Self::handle_search_movie))
+                .route("/movie/tags", web::get().to(Self::handle_get_tags))
                 .route("/movie/file", web::post().to(Self::handle_upload_movie))
                 .route("/movie/file", web::get().to(Self::handle_download_movie))
                 .route(
@@ -188,7 +190,7 @@ where
     /// * `query` - The query parameters.
     async fn handle_search_movie(
         handler: web::Data<RwLock<ServiceHandler<I, S>>>,
-        query: web::Query<MovieSearchQuery>,
+        query: QsQuery<MovieSearchQuery>,
     ) -> Result<impl Responder> {
         debug!("Handling GET /api/v1/movie/search");
         trace!("Request query: {:?}", query);
@@ -198,6 +200,20 @@ where
         let handler = handler.read().await;
 
         handler.handle_search_movies(query).await
+    }
+
+    /// Handles the GET /api/v1/tags endpoint.
+    ///
+    /// # Arguments
+    /// * `handler` - The service handler.
+    async fn handle_get_tags(
+        handler: web::Data<RwLock<ServiceHandler<I, S>>>,
+    ) -> Result<impl Responder> {
+        debug!("Handling GET /api/v1/movie/tags");
+
+        let handler = handler.read().await;
+
+        handler.handle_get_tags().await
     }
 
     /// Handles the GET /api/v1/movie endpoint.
