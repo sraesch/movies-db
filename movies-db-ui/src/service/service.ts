@@ -1,4 +1,3 @@
-import { Set } from "typescript";
 import { MovieDetailed, MovieId, MovieSearchQuery, MovieSearchResult, MovieSubmit, SortingField, SortingOrder } from "./types";
 
 export type ProgressUpdate = (progress: number, done: boolean) => void;
